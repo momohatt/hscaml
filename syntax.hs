@@ -11,6 +11,6 @@ data Expr =
       deriving (Show)
 
 data Value =
-        VInt Int
+        VInt Integer
       | VBool Bool
       deriving (Show)

@@ -4,6 +4,7 @@ import System.IO
 import qualified Control.Monad (when)
 
 import Parser (parseString)
+import Eval (eval)
 
 main :: IO()
 main = do
@@ -13,5 +14,5 @@ main = do
         then
             return ()
         else do
-            print $ parseString input
+            print $ eval $ parseString input
             main

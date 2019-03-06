@@ -53,6 +53,8 @@ ops = [ [Prefix (reservedOp "-"   >> return ENeg)          ]
 term =  parens expr
      -- <|> Var <$> identifier
     <|> EConstInt <$> integer
+    <|> (reserved "true"  >> return (EConstBool True ))
+    <|> (reserved "false" >> return (EConstBool False))
 
 parseString :: String -> Expr
 parseString str =

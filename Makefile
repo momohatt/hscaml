@@ -1,5 +1,5 @@
 GHC=ghc
-SOURCES=syntax.hs parser.hs main.hs
+SOURCES=syntax.hs parser.hs eval.hs main.hs
 PROGNAME=main
 
 all:	$(SOURCES)
