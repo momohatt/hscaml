@@ -59,7 +59,7 @@ ops = [ [Prefix (reservedOp "-"   >> return ENeg)          ]
        ]
 
 term =  parens expr
-     -- <|> Var <$> identifier
+    <|> EVar <$> identifier
     <|> EConstInt <$> integer
     <|> (reserved "true"  >> return (EConstBool True ))
     <|> (reserved "false" >> return (EConstBool False))

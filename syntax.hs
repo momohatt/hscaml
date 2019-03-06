@@ -3,6 +3,7 @@ module Syntax where
 data Expr =
         EConstInt Integer
       | EConstBool Bool
+      | EVar String
       | ENot Expr
       | EAnd Expr Expr
       | EOr Expr Expr
@@ -22,3 +23,5 @@ data Value =
         VInt Integer
       | VBool Bool
       deriving (Show, Eq, Ord)
+
+type Env = [(String, Value)]
