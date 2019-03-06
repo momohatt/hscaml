@@ -6,6 +6,7 @@ import qualified Control.Monad (when)
 import Syntax
 import Parser (parseString)
 import Eval (eval, evalDecl)
+import Typing
 
 initEnv =
     [("a", VInt 100)]

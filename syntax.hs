@@ -31,7 +31,7 @@ data Binop = BAnd
            | BLT
            | BGE
            | BLE
-           deriving (Show)
+           deriving (Show, Eq)
 
 data Value = VInt Integer
            | VBool Bool
