@@ -74,17 +74,17 @@ letExpr =
                 (reserved "in" *> expr)
 
 ops = [ [Prefix (reservedOp "-"   >> return ENeg)          ]
-      , [Infix  (reservedOp "*"   >> return EMul) AssocLeft,
-         Infix  (reservedOp "/"   >> return EDiv) AssocLeft,
-         Infix  (reservedOp "&&"  >> return EAnd) AssocLeft]
-      , [Infix  (reservedOp "+"   >> return EAdd) AssocLeft,
-         Infix  (reservedOp "-"   >> return ESub) AssocLeft,
-         Infix  (reservedOp "||"  >> return EOr)  AssocLeft]
-      , [Infix  (reservedOp "="   >> return EEq)  AssocLeft,
-         Infix  (reservedOp ">"   >> return EGT)  AssocLeft,
-         Infix  (reservedOp "<"   >> return ELT)  AssocLeft,
-         Infix  (reservedOp ">="  >> return EGE)  AssocLeft,
-         Infix  (reservedOp "<="  >> return ELE)  AssocLeft]
+      , [Infix  (reservedOp "*"   >> return (EBinop BMul)) AssocLeft,
+         Infix  (reservedOp "/"   >> return (EBinop BDiv)) AssocLeft,
+         Infix  (reservedOp "&&"  >> return (EBinop BAnd)) AssocLeft]
+      , [Infix  (reservedOp "+"   >> return (EBinop BAdd)) AssocLeft,
+         Infix  (reservedOp "-"   >> return (EBinop BSub)) AssocLeft,
+         Infix  (reservedOp "||"  >> return (EBinop BOr )) AssocLeft]
+      , [Infix  (reservedOp "="   >> return (EBinop BEq )) AssocLeft,
+         Infix  (reservedOp ">"   >> return (EBinop BGT )) AssocLeft,
+         Infix  (reservedOp "<"   >> return (EBinop BLT )) AssocLeft,
+         Infix  (reservedOp ">="  >> return (EBinop BGE )) AssocLeft,
+         Infix  (reservedOp "<="  >> return (EBinop BLE )) AssocLeft]
        ]
 
 term =  parens expr
