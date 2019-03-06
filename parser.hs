@@ -24,7 +24,8 @@ languageDef =
                                      ]
            , Token.reservedOpNames = ["+", "-", "*", "/", "="
                                      , "&&", "||"
-                                     , "<", ">", "and", "or", "not", ";;" ]
+                                     , "<", ">", "<=", ">=",
+                                     "and", "or", "not", ";;" ]
            , Token.caseSensitive    = True
            }
 
@@ -48,6 +49,11 @@ ops = [ [Prefix (reservedOp "-"   >> return ENeg)          ]
          Infix  (reservedOp "/"   >> return EDiv) AssocLeft]
       , [Infix  (reservedOp "+"   >> return EAdd) AssocLeft,
          Infix  (reservedOp "-"   >> return ESub) AssocLeft]
+      , [Infix  (reservedOp "="   >> return EEq) AssocLeft,
+         Infix  (reservedOp ">"   >> return EGT) AssocLeft,
+         Infix  (reservedOp "<"   >> return ELT) AssocLeft,
+         Infix  (reservedOp ">="  >> return EGE) AssocLeft,
+         Infix  (reservedOp "<="  >> return ELE) AssocLeft]
        ]
 
 term =  parens expr
