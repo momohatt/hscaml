@@ -27,6 +27,6 @@ repl env = do
               CDecl e ->
                   repl (evalDecl env e)
 
-main :: IO()
+main :: IO ()
 main =
     repl initEnv

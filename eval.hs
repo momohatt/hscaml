@@ -24,11 +24,10 @@ eval env e =
       ELet x e1 e2 ->
           eval ((x, eval env e1) : env) e2
       EApp f ys ->
+          let zs = map (eval env) ys in
           case lookup f env of
             Just (VFun _ xs env' body) ->
                 eval (zip xs zs ++ env') body
-                    where zs = map (eval env) ys
-
 
 evalBinOp :: Binop -> Value -> Value -> Value
 evalBinOp op =
@@ -57,4 +56,5 @@ evalDecl env e =
       DLet x e' ->
           (x, eval env e') : env
       DLetRec f xs e' ->
-          (f, VFun f xs env e') : env
+          let env' = (f, VFun f xs env' e') : env in
+              env'

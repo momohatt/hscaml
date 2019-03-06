@@ -38,7 +38,7 @@ identifier = Token.identifier lexer
 reserved   = Token.reserved   lexer
 reservedOp = Token.reservedOp lexer
 parens     = Token.parens     lexer
-integer    = Token.integer    lexer
+natural    = Token.natural    lexer
 whiteSpace = Token.whiteSpace lexer
 
 parser :: Parser Command
@@ -67,7 +67,6 @@ expr :: Parser Expr
 expr =  try ifExpr
     <|> try letExpr
     <|> try letRecExpr
-    <|> try appExpr
     <|> buildExpressionParser ops term
 
 ifExpr =
@@ -107,8 +106,9 @@ ops = [ [Prefix (reservedOp "-"  >> return ENeg)          ]
        ]
 
 term =  parens expr
+    <|> try appExpr
     <|> EVar <$> identifier
-    <|> EConstInt <$> integer
+    <|> EConstInt <$> natural
     <|> (reserved "true"  >> return (EConstBool True ))
     <|> (reserved "false" >> return (EConstBool False))
 
