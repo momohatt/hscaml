@@ -27,6 +27,9 @@ eval env e =
       ELT e1 e2  -> relEval (<)  env e1 e2
       EGE e1 e2  -> relEval (>=) env e1 e2
       ELE e1 e2  -> relEval (<=) env e1 e2
+      EIf e1 e2 e3 ->
+          case eval env e1 of
+            VBool b -> if b then eval env e2 else eval env e3
 
 boolEval :: (Bool -> Bool -> Bool) -> Env -> Expr -> Expr -> Value
 boolEval op env e1 e2 =

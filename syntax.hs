@@ -17,6 +17,7 @@ data Expr =
       | ELT Expr Expr
       | EGE Expr Expr
       | ELE Expr Expr
+      | EIf Expr Expr Expr
       deriving (Show)
 
 data Value =

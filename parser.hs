@@ -42,7 +42,15 @@ parser :: Parser Expr
 parser = whiteSpace >> expr
 
 expr :: Parser Expr
-expr = buildExpressionParser ops term
+expr =   buildExpressionParser ops term
+     <|> ifExpr
+
+ifExpr :: Parser Expr
+ifExpr =
+    EIf <$>
+        (reserved "if" *> expr) <*>
+            (reserved "then" *> expr) <*>
+                (reserved "else" *> expr)
 
 ops = [ [Prefix (reservedOp "-"   >> return ENeg)          ]
       , [Infix  (reservedOp "*"   >> return EMul) AssocLeft,
@@ -50,12 +58,12 @@ ops = [ [Prefix (reservedOp "-"   >> return ENeg)          ]
          Infix  (reservedOp "&&"  >> return EAnd) AssocLeft]
       , [Infix  (reservedOp "+"   >> return EAdd) AssocLeft,
          Infix  (reservedOp "-"   >> return ESub) AssocLeft,
-         Infix  (reservedOp "||"  >> return EOr) AssocLeft]
-      , [Infix  (reservedOp "="   >> return EEq) AssocLeft,
-         Infix  (reservedOp ">"   >> return EGT) AssocLeft,
-         Infix  (reservedOp "<"   >> return ELT) AssocLeft,
-         Infix  (reservedOp ">="  >> return EGE) AssocLeft,
-         Infix  (reservedOp "<="  >> return ELE) AssocLeft]
+         Infix  (reservedOp "||"  >> return EOr)  AssocLeft]
+      , [Infix  (reservedOp "="   >> return EEq)  AssocLeft,
+         Infix  (reservedOp ">"   >> return EGT)  AssocLeft,
+         Infix  (reservedOp "<"   >> return ELT)  AssocLeft,
+         Infix  (reservedOp ">="  >> return EGE)  AssocLeft,
+         Infix  (reservedOp "<="  >> return ELE)  AssocLeft]
        ]
 
 term =  parens expr
@@ -69,4 +77,3 @@ parseString str =
   case parse parser "" str of
     Left e  -> error $ show e
     Right r -> r
-
