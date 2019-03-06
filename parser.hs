@@ -21,11 +21,14 @@ languageDef =
                                      , "true"
                                      , "false"
                                      , "let"
+                                     , "rec"
+                                     , "in"
+                                     , ";;"
                                      ]
            , Token.reservedOpNames = ["+", "-", "*", "/", "="
                                      , "&&", "||", "not"
                                      , "<", ">", "<=", ">="
-                                     , ";;" ]
+                                     ]
            , Token.caseSensitive    = True
            }
 
@@ -38,19 +41,37 @@ parens     = Token.parens     lexer
 integer    = Token.integer    lexer
 whiteSpace = Token.whiteSpace lexer
 
-parser :: Parser Expr
-parser = whiteSpace >> expr
+parser :: Parser Command
+parser = whiteSpace >> command
+
+command :: Parser Command
+command =  try (CExpr <$> expr <* reserved ";;")  -- need 'try' for letDecl and letExpr
+       <|> (CDecl <$> decl <* reserved ";;")
+
+decl :: Parser Decl
+decl =  letDecl
+
+letDecl =
+    DLet <$>
+        (reserved "let" *> identifier) <*>
+            (reserved "=" *> expr)
 
 expr :: Parser Expr
-expr =   buildExpressionParser ops term
-     <|> ifExpr
+expr =  buildExpressionParser ops term
+    <|> ifExpr
+    <|> letExpr
 
-ifExpr :: Parser Expr
 ifExpr =
     EIf <$>
         (reserved "if" *> expr) <*>
             (reserved "then" *> expr) <*>
                 (reserved "else" *> expr)
+
+letExpr =
+    ELet <$>
+        (reserved "let" *> identifier) <*>
+            (reservedOp "=" *> expr) <*>
+                (reserved "in" *> expr)
 
 ops = [ [Prefix (reservedOp "-"   >> return ENeg)          ]
       , [Infix  (reservedOp "*"   >> return EMul) AssocLeft,
@@ -72,7 +93,7 @@ term =  parens expr
     <|> (reserved "true"  >> return (EConstBool True ))
     <|> (reserved "false" >> return (EConstBool False))
 
-parseString :: String -> Expr
+parseString :: String -> Command
 parseString str =
   case parse parser "" str of
     Left e  -> error $ show e

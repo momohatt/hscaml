@@ -5,19 +5,28 @@ import qualified Control.Monad (when)
 
 import Syntax
 import Parser (parseString)
-import Eval (eval)
+import Eval (eval, evalDecl)
 
 initEnv =
     [("a", VInt 100)]
 
-main :: IO()
-main = do
-    putStr "$ " >> hFlush stdout
+repl :: Env -> IO()
+repl env = do
+    putStr "# " >> hFlush stdout
     input <- getLine
     if input == "quit"
-        then
+       then
             return ()
         else do
-            print $ eval initEnv $ parseString input
-            -- print $ parseString input
-            main
+            let input' = parseString input
+            print input'
+            case input' of
+              CExpr e -> do
+                  print $ eval env e
+                  repl env
+              CDecl e ->
+                  repl (evalDecl env e)
+
+main :: IO()
+main =
+    repl initEnv

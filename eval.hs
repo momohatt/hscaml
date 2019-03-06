@@ -30,6 +30,8 @@ eval env e =
       EIf e1 e2 e3 ->
           case eval env e1 of
             VBool b -> if b then eval env e2 else eval env e3
+      ELet x e1 e2 ->
+          eval ((x, eval env e1):env) e2
 
 boolEval :: (Bool -> Bool -> Bool) -> Env -> Expr -> Expr -> Value
 boolEval op env e1 e2 =
@@ -44,3 +46,9 @@ arithEval op env e1 e2 =
 relEval :: (Value -> Value -> Bool) -> Env -> Expr -> Expr -> Value
 relEval r env e1 e2 =
     VBool $ r (eval env e1) (eval env e2)
+
+evalDecl :: Env -> Decl -> Env
+evalDecl env e =
+    case e of
+      DLet x e' ->
+          (x, eval env e'):env

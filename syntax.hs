@@ -1,5 +1,14 @@
 module Syntax where
 
+data Command =
+        CExpr Expr
+      | CDecl Decl
+      deriving (Show)
+
+data Decl =
+    DLet String Expr
+    deriving (Show)
+
 data Expr =
         EConstInt Integer
       | EConstBool Bool
@@ -18,6 +27,7 @@ data Expr =
       | EGE Expr Expr
       | ELE Expr Expr
       | EIf Expr Expr Expr
+      | ELet String Expr Expr
       deriving (Show)
 
 data Value =
