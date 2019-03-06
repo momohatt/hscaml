@@ -5,6 +5,7 @@ data Command = CExpr Expr
              deriving (Show)
 
 data Decl = DLet String Expr
+          | DLetRec String [String] Expr
     deriving (Show)
 
 data Expr = EConstInt Integer
@@ -15,6 +16,8 @@ data Expr = EConstInt Integer
           | EBinop Binop Expr Expr
           | EIf Expr Expr Expr
           | ELet String Expr Expr
+          | ELetRec String [String] Expr Expr
+          | EApp String [Expr]
           deriving (Show)
 
 data Binop = BAnd
@@ -32,6 +35,7 @@ data Binop = BAnd
 
 data Value = VInt Integer
            | VBool Bool
-           deriving (Show, Eq, Ord)
+           | VFun String [String] Env Expr
+           deriving (Show)
 
 type Env = [(String, Value)]

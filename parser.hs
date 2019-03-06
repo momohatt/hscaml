@@ -49,17 +49,26 @@ command =  try (CExpr <$> expr <* reserved ";;")  -- need 'try' for letDecl and 
        <|> (CDecl <$> decl <* reserved ";;")
 
 decl :: Parser Decl
-decl =  letDecl
+decl =  try letDecl
+    <|> letRecDecl
 
 letDecl =
     DLet <$>
         (reserved "let" *> identifier) <*>
             (reserved "=" *> expr)
 
+letRecDecl =
+    DLetRec <$>
+        (reserved "let" *> reserved "rec" *> identifier) <*>
+            many1 identifier <*>
+                (reservedOp "=" *> expr)
+
 expr :: Parser Expr
-expr =  buildExpressionParser ops term
-    <|> ifExpr
-    <|> letExpr
+expr =  try ifExpr
+    <|> try letExpr
+    <|> try letRecExpr
+    <|> try appExpr
+    <|> buildExpressionParser ops term
 
 ifExpr =
     EIf <$>
@@ -73,18 +82,28 @@ letExpr =
             (reservedOp "=" *> expr) <*>
                 (reserved "in" *> expr)
 
-ops = [ [Prefix (reservedOp "-"   >> return ENeg)          ]
-      , [Infix  (reservedOp "*"   >> return (EBinop BMul)) AssocLeft,
-         Infix  (reservedOp "/"   >> return (EBinop BDiv)) AssocLeft,
-         Infix  (reservedOp "&&"  >> return (EBinop BAnd)) AssocLeft]
-      , [Infix  (reservedOp "+"   >> return (EBinop BAdd)) AssocLeft,
-         Infix  (reservedOp "-"   >> return (EBinop BSub)) AssocLeft,
-         Infix  (reservedOp "||"  >> return (EBinop BOr )) AssocLeft]
-      , [Infix  (reservedOp "="   >> return (EBinop BEq )) AssocLeft,
-         Infix  (reservedOp ">"   >> return (EBinop BGT )) AssocLeft,
-         Infix  (reservedOp "<"   >> return (EBinop BLT )) AssocLeft,
-         Infix  (reservedOp ">="  >> return (EBinop BGE )) AssocLeft,
-         Infix  (reservedOp "<="  >> return (EBinop BLE )) AssocLeft]
+letRecExpr =
+    ELetRec <$>
+        (reserved "let" *> reserved "rec" *> identifier) <*>
+            many1 identifier <*>
+                (reservedOp "=" *> expr) <*>
+                    (reserved "in" *> expr)
+
+appExpr =
+    EApp <$> identifier <*> many1 term
+
+ops = [ [Prefix (reservedOp "-"  >> return ENeg)          ]
+      , [Infix  (reservedOp "*"  >> return (EBinop BMul)) AssocLeft,
+         Infix  (reservedOp "/"  >> return (EBinop BDiv)) AssocLeft,
+         Infix  (reservedOp "&&" >> return (EBinop BAnd)) AssocLeft]
+      , [Infix  (reservedOp "+"  >> return (EBinop BAdd)) AssocLeft,
+         Infix  (reservedOp "-"  >> return (EBinop BSub)) AssocLeft,
+         Infix  (reservedOp "||" >> return (EBinop BOr )) AssocLeft]
+      , [Infix  (reservedOp "="  >> return (EBinop BEq )) AssocLeft,
+         Infix  (reservedOp ">"  >> return (EBinop BGT )) AssocLeft,
+         Infix  (reservedOp "<"  >> return (EBinop BLT )) AssocLeft,
+         Infix  (reservedOp ">=" >> return (EBinop BGE )) AssocLeft,
+         Infix  (reservedOp "<=" >> return (EBinop BLE )) AssocLeft]
        ]
 
 term =  parens expr
