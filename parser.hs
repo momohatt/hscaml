@@ -23,9 +23,9 @@ languageDef =
                                      , "let"
                                      ]
            , Token.reservedOpNames = ["+", "-", "*", "/", "="
-                                     , "&&", "||"
-                                     , "<", ">", "<=", ">=",
-                                     "and", "or", "not", ";;" ]
+                                     , "&&", "||", "not"
+                                     , "<", ">", "<=", ">="
+                                     , ";;" ]
            , Token.caseSensitive    = True
            }
 
@@ -46,9 +46,11 @@ expr = buildExpressionParser ops term
 
 ops = [ [Prefix (reservedOp "-"   >> return ENeg)          ]
       , [Infix  (reservedOp "*"   >> return EMul) AssocLeft,
-         Infix  (reservedOp "/"   >> return EDiv) AssocLeft]
+         Infix  (reservedOp "/"   >> return EDiv) AssocLeft,
+         Infix  (reservedOp "&&"  >> return EAnd) AssocLeft]
       , [Infix  (reservedOp "+"   >> return EAdd) AssocLeft,
-         Infix  (reservedOp "-"   >> return ESub) AssocLeft]
+         Infix  (reservedOp "-"   >> return ESub) AssocLeft,
+         Infix  (reservedOp "||"  >> return EOr) AssocLeft]
       , [Infix  (reservedOp "="   >> return EEq) AssocLeft,
          Infix  (reservedOp ">"   >> return EGT) AssocLeft,
          Infix  (reservedOp "<"   >> return ELT) AssocLeft,

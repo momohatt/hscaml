@@ -3,6 +3,9 @@ module Syntax where
 data Expr =
         EConstInt Integer
       | EConstBool Bool
+      | ENot Expr
+      | EAnd Expr Expr
+      | EOr Expr Expr
       | ENeg Expr
       | EAdd Expr Expr
       | ESub Expr Expr
