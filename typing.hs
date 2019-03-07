@@ -54,11 +54,13 @@ genConst env e =
           (t2, c2) <- genConst env' e2
           return (TFun ts tr, (tr, t1) : c1 ++ c2)
       EApp f es -> do
-          (tf, cf) <- genConst env (EVar f)
+          (tf, cf) <- genConst env f
           (ts, cs) <- unzip <$> mapM (genConst env) es
           case tf of
-            TFun tfa tfr ->
-                return (tfr, zip tfa ts ++ cf ++ concat cs)
+            TFun tfa tfr -> return (tfr, zip tfa ts ++ cf ++ concat cs)
+            TVar t -> do
+                tr <- genNewTyVar
+                return (tr, (TVar t, TFun ts tr) : cf ++ concat cs)
 
 tySubst :: Subst -> Ty -> Ty
 tySubst s t =
@@ -132,16 +134,16 @@ genConstDecl env d =
           (t, c) <- genConst (zip xs ts ++ env') e
           return (TFun ts tr, (tr, t) : c)
 
-typeCheck :: TyEnv -> Command -> Either String (Ty, TyEnv)
-typeCheck tenv c =
+typeCheck :: Int -> TyEnv -> Command -> Either String (Ty, TyEnv, Int)
+typeCheck n tenv c =
     case c of
       CExpr e ->
           case tyUnify const of
-            Right s -> Right (tySubst s t, tenv)
+            Right s -> Right (tySubst s t, tenv, n')
             Left msg -> Left msg
-            where (t, const) = evalState (genConst tenv e) 0
+            where ((t, const), n') = runState (genConst tenv e) n
       CDecl d ->
           case tyUnify const of
-            Right s -> Right (tySubst s t, (nameOfDecl d, tySubst s t) : tenv)
+            Right s -> Right (tySubst s t, (nameOfDecl d, tySubst s t) : tenv, n')
             Left msg -> Left msg
-            where (t, const) = evalState (genConstDecl tenv d) 0
+            where ((t, const), n') = runState (genConstDecl tenv d) n

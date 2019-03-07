@@ -17,7 +17,7 @@ data Expr = EConstInt Integer
           | EIf Expr Expr Expr
           | ELet String Expr Expr
           | ELetRec String [String] Expr Expr
-          | EApp String [Expr]
+          | EApp Expr [Expr]
           deriving (Show)
 
 data Binop = BAnd

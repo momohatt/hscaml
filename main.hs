@@ -12,8 +12,8 @@ import Typing
 initEnv = [("a", VInt 100)]
 initTenv = [("a", TInt)]
 
-repl :: TyEnv -> Env -> IO ()
-repl tenv env = do
+repl :: Int -> TyEnv -> Env -> IO ()
+repl n tenv env = do
     putStr "# " >> hFlush stdout
     input <- getLine
     if input == "quit"
@@ -22,21 +22,21 @@ repl tenv env = do
         else do
             let parsedProg = parseString input
             -- print parsedProg
-            case typeCheck tenv parsedProg of
+            case typeCheck n tenv parsedProg of
               Left msg -> do
                   putStrLn ("TypeError: " ++ msg)
-                  repl tenv env
-              Right (t, tenv') ->
+                  repl n tenv env
+              Right (t, tenv', n) ->
                 -- print t
                 case parsedProg of
                   CExpr e -> do
                       putStrLn $ "- : " ++ tyToStr t ++ " = " ++ valToStr (eval env e)
-                      repl tenv' env
+                      repl n tenv' env
                   CDecl e -> do
                       let (env', v) = evalDecl env e
                       putStrLn $ "val " ++ nameOfDecl e ++ " : " ++ tyToStr t ++ " = " ++ valToStr v
-                      repl tenv' env'
+                      repl n tenv' env'
 
 main :: IO ()
 main =
-    repl initTenv initEnv
+    repl 0 initTenv initEnv

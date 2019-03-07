@@ -67,6 +67,7 @@ expr :: Parser Expr
 expr =  try ifExpr
     <|> try letExpr
     <|> try letRecExpr
+    <|> try appExpr
     <|> buildExpressionParser ops term
 
 ifExpr =
@@ -89,7 +90,7 @@ letRecExpr =
                     (reserved "in" *> expr)
 
 appExpr =
-    EApp <$> identifier <*> many1 term
+    EApp <$> term <*> many1 term
 
 ops = [ [Prefix (reservedOp "-"  >> return ENeg)          ]
       , [Infix  (reservedOp "*"  >> return (EBinop BMul)) AssocLeft,
@@ -106,7 +107,6 @@ ops = [ [Prefix (reservedOp "-"  >> return ENeg)          ]
        ]
 
 term =  parens expr
-    <|> try appExpr
     <|> EVar <$> identifier
     <|> EConstInt <$> natural
     <|> (reserved "true"  >> return (EConstBool True ))

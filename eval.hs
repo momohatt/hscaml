@@ -28,8 +28,8 @@ eval env e =
           where env' = (f, VFun f xs env' e1) : env
       EApp f ys ->
           let zs = map (eval env) ys in
-          case lookup f env of
-            Just (VFun _ xs env' body) -> eval (zip xs zs ++ env') body
+          case eval env f of
+            VFun _ xs env' body -> eval (zip xs zs ++ env') body
 
 evalBinOp :: Binop -> Value -> Value -> Value
 evalBinOp op =
