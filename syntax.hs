@@ -39,3 +39,16 @@ data Value = VInt Integer
            deriving (Show)
 
 type Env = [(String, Value)]
+
+valToStr :: Value -> String
+valToStr v =
+    case v of
+      VInt n -> show n
+      VBool b -> show b
+      VFun {} -> "<fun>"
+
+nameOfDecl :: Decl -> String
+nameOfDecl d =
+    case d of
+      DLet x _ -> x
+      DLetRec x _ _ -> x

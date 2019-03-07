@@ -142,9 +142,6 @@ typeCheck tenv c =
             where (t, const) = evalState (genConst tenv e) 0
       CDecl d ->
           case tyUnify const of
-            Right s -> Right (tySubst s t, (name, tySubst s t) : tenv)
+            Right s -> Right (tySubst s t, (nameOfDecl d, tySubst s t) : tenv)
             Left msg -> Left msg
             where (t, const) = evalState (genConstDecl tenv d) 0
-                  name = case d of
-                           DLet x _ -> x
-                           DLetRec x _ _ -> x

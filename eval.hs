@@ -23,11 +23,13 @@ eval env e =
             VBool b -> if b then eval env e2 else eval env e3
       ELet x e1 e2 ->
           eval ((x, eval env e1) : env) e2
+      ELetRec f xs e1 e2 ->
+          eval env' e2
+          where env' = (f, VFun f xs env' e1) : env
       EApp f ys ->
           let zs = map (eval env) ys in
           case lookup f env of
-            Just (VFun _ xs env' body) ->
-                eval (zip xs zs ++ env') body
+            Just (VFun _ xs env' body) -> eval (zip xs zs ++ env') body
 
 evalBinOp :: Binop -> Value -> Value -> Value
 evalBinOp op =
@@ -50,11 +52,12 @@ evalBinOp op =
       BLE  -> \ e1 e2 -> case (e1, e2) of (VInt a, VInt b)   -> VBool $ a <= b
                                           (VBool a, VBool b) -> VBool $ a <= b
 
-evalDecl :: Env -> Decl -> Env
+evalDecl :: Env -> Decl -> (Env, Value)
 evalDecl env e =
     case e of
       DLet x e' ->
-          (x, eval env e') : env
+          ((x, val) : env, val)
+              where val = eval env e'
       DLetRec f xs e' ->
           let env' = (f, VFun f xs env' e') : env in
-              env'
+              (env', VFun f xs env' e')
