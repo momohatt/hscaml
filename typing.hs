@@ -57,3 +57,22 @@ genConst env e =
           case tf of
             TFun tfa tfr ->
                 return (tfr, zip tfa ts ++ cf ++ concat cs)
+
+unify :: Constraint -> Maybe ()
+unify c =
+    case c of
+      [] -> Just ()
+      ts : xc ->
+          case ts of
+            (TInt, TInt) -> unify xc
+            (TBool, TBool) -> unify xc
+
+typeCheck :: Command -> IO ()
+typeCheck c =
+    case c of
+      CExpr e -> do
+          let (_, const) = evalState (genConst [] e) 0
+          case unify const of
+            Just _ -> return ()
+            Nothing ->
+                print "unify error"

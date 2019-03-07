@@ -1,7 +1,7 @@
 module Main where
 
 import System.IO
-import qualified Control.Monad (when)
+import Control.Exception
 
 import Syntax
 import Parser (parseString)
@@ -19,9 +19,13 @@ repl env = do
        then
             return ()
         else do
-            let input' = parseString input
-            print input'
-            case input' of
+            let parsedProg = parseString input
+            print parsedProg
+            typeCheck parsedProg
+             `catch` \(PatternMatchFail _) -> do
+                 putStrLn "TypeError."
+                 repl env
+            case parsedProg of
               CExpr e -> do
                   print $ eval env e
                   repl env
