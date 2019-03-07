@@ -8,3 +8,4 @@ data Ty = TInt
 
 type Constraint = [(Ty, Ty)]
 type TyEnv = [(String, Ty)]
+type Subst = [(String, Ty)]

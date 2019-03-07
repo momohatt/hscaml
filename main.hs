@@ -6,13 +6,14 @@ import Control.Exception
 import Syntax
 import Parser (parseString)
 import Eval (eval, evalDecl)
+import Type
 import Typing
 
-initEnv =
-    [("a", VInt 100)]
+initEnv = [("a", VInt 100)]
+initTenv = [("a", TInt)]
 
-repl :: Env -> IO()
-repl env = do
+repl :: TyEnv -> Env -> IO()
+repl tenv env = do
     putStr "# " >> hFlush stdout
     input <- getLine
     if input == "quit"
@@ -21,17 +22,18 @@ repl env = do
         else do
             let parsedProg = parseString input
             print parsedProg
-            typeCheck parsedProg
-             `catch` \(PatternMatchFail _) -> do
-                 putStrLn "TypeError."
-                 repl env
-            case parsedProg of
-              CExpr e -> do
-                  print $ eval env e
-                  repl env
-              CDecl e ->
-                  repl (evalDecl env e)
+            case typeCheck tenv parsedProg of
+              Left msg -> do
+                  putStrLn ("TypeError: " ++ msg)
+                  repl tenv env
+              Right (t, tenv') ->
+                case parsedProg of
+                  CExpr e -> do
+                      print $ eval env e
+                      repl tenv env
+                  CDecl e ->
+                      repl tenv (evalDecl env e)
 
 main :: IO ()
 main =
-    repl initEnv
+    repl initTenv initEnv
