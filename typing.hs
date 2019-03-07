@@ -121,6 +121,17 @@ tyUnify c =
                                where newc = replaceFvInCons a (TFun t1 t2) xc
             _ -> Left $ "cannot unify " ++ show (fst ts) ++ " and " ++ show (snd ts)
 
+genConstDecl :: TyEnv -> Decl -> State Int (Ty, Constraint)
+genConstDecl env d =
+    case d of
+      DLet x e -> genConst env e
+      DLetRec f xs e -> do
+          ts <- mapM (const genNewTyVar) xs
+          tr <- genNewTyVar
+          let env' = (f, TFun ts tr) : env
+          (t, c) <- genConst (zip xs ts ++ env') e
+          return (TFun ts tr, (tr, t) : c)
+
 typeCheck :: TyEnv -> Command -> Either String (Ty, TyEnv)
 typeCheck tenv c =
     case c of
@@ -129,4 +140,11 @@ typeCheck tenv c =
             Right s -> Right (tySubst s t, tenv)
             Left msg -> Left msg
             where (t, const) = evalState (genConst tenv e) 0
-                  s = tyUnify const
+      CDecl d ->
+          case tyUnify const of
+            Right s -> Right (tySubst s t, (name, tySubst s t) : tenv)
+            Left msg -> Left msg
+            where (t, const) = evalState (genConstDecl tenv d) 0
+                  name = case d of
+                           DLet x _ -> x
+                           DLetRec x _ _ -> x

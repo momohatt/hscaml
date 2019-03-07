@@ -26,13 +26,14 @@ repl tenv env = do
               Left msg -> do
                   putStrLn ("TypeError: " ++ msg)
                   repl tenv env
-              Right (t, tenv') ->
+              Right (t, tenv') -> do
+                print t
                 case parsedProg of
                   CExpr e -> do
                       print $ eval env e
-                      repl tenv env
+                      repl tenv' env
                   CDecl e ->
-                      repl tenv (evalDecl env e)
+                      repl tenv' (evalDecl env e)
 
 main :: IO ()
 main =
