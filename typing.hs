@@ -10,7 +10,7 @@ genNewTyVar :: State Int Ty
 genNewTyVar = do
     i <- get
     put $ i + 1
-    return $ TVar $ "t_" ++ show i
+    return $ TVar $ "t" ++ show i
 
 -- generate constraint
 genConst :: TyEnv -> Expr -> State Int (Ty, Constraint)

@@ -17,7 +17,7 @@ repl tenv env = do
     putStr "# " >> hFlush stdout
     input <- getLine
     if input == "quit"
-       then
+        then
             return ()
         else do
             let parsedProg = parseString input
