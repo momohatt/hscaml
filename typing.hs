@@ -101,6 +101,15 @@ genConst env e =
                 -- t1 <- instantiate ts1
                 r2 <- genConst ((x, t1) : env) e2
                 return $ (\(t2, c2) -> (t2, c1 ++ c2)) <$> r2
+      ELetRec x e1 e2 -> do
+          t <- genNewTyVar
+          r1 <- genConstDecl ((x, ([], t)) : env) (DLet x e1)
+          case r1 of
+            Left msg -> return $ Left msg
+            Right (t1, c1) -> do
+                -- t1 <- instantiate ts1
+                r2 <- genConst ((x, t1) : env) e2
+                return $ (\(t2, c2) -> (t2, c1 ++ c2)) <$> r2
       EApp f e -> do
           r1 <- genConst env f
           r2 <- genConst env e

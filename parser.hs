@@ -55,21 +55,19 @@ decl :: Parser Decl
 decl =  try letDecl
     <|> letRecDecl
 
-letDecl =
-    DLet <$>
-        (reserved "let" *> identifier) <*>
-            (reserved "=" *> expr)
+letDecl = try (DLet <$> (reserved "let" *> identifier) <*> (reserved "=" *> expr))
+      <|> DLet <$> (reserved "let" *> identifier) <*> funExpr
 
 letRecDecl = DLetRec <$> (reserved "let" *> reserved "rec" *> identifier) <*> funExpr
 
 funExpr = try (EFun <$> (identifier <* reservedOp "=") <*> expr)
-       <|> EFun <$> identifier <*> funExpr
+      <|> EFun <$> identifier <*> funExpr
 
 absFunExpr = try (EFun <$> (reserved "fun" *> identifier) <*> (reservedOp "->" *> expr))
-          <|> EFun <$> (reserved "fun" *> identifier) <*> absFunExpr'
+         <|> EFun <$> (reserved "fun" *> identifier) <*> absFunExpr'
 
 absFunExpr' = try (EFun <$> identifier <*> (reservedOp "->" *> expr))
-           <|> EFun <$> identifier <*> absFunExpr'
+          <|> EFun <$> identifier <*> absFunExpr'
 
 expr :: Parser Expr
 expr =  try ifExpr
@@ -78,20 +76,16 @@ expr =  try ifExpr
     <|> try absFunExpr
     <|> buildExpressionParser ops term
 
-ifExpr =
-    EIf <$>
+ifExpr = EIf <$>
         (reserved "if" *> expr) <*>
             (reserved "then" *> expr) <*>
                 (reserved "else" *> expr)
 
-letExpr =
-    ELet <$>
-        (reserved "let" *> identifier) <*>
-            (reservedOp "=" *> expr) <*>
-                (reserved "in" *> expr)
+letExpr = try (ELet <$> (reserved "let" *> identifier) <*> (reservedOp "=" *> expr) <*> (reserved "in" *> expr))
+      <|> ELet <$> (reserved "let" *> identifier) <*> funExpr <*> (reserved "in" *> expr)
 
 letRecExpr =
-    ELet <$> (reserved "let" *> reserved "rec" *> identifier) <*>
+    ELetRec <$> (reserved "let" *> reserved "rec" *> identifier) <*>
         funExpr <*>
             (reserved "in" *> expr)
 
@@ -115,7 +109,7 @@ term = try appExpr
 appExpr =
     (\l -> if length l == 1 then head l else foldl1 EApp l) <$> many1 atom
 
-atom =  (\x y -> ETuple $ x : y) <$> (reservedOp "(" *> expr) <*> many1 (reservedOp "," *> expr) <* reservedOp ")"
+atom =  try ((\x y -> ETuple $ x : y) <$> (reservedOp "(" *> expr) <*> many1 (reservedOp "," *> expr) <* reservedOp ")")
     <|> parens expr
     <|> EVar <$> identifier
     <|> EConstInt <$> natural

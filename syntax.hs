@@ -17,6 +17,7 @@ data Expr = EConstInt Integer
           | EBinop Binop Expr Expr
           | EIf Expr Expr Expr
           | ELet String Expr Expr
+          | ELetRec String Expr Expr
           | EFun String Expr
           | EApp Expr Expr
           deriving (Show)

@@ -27,6 +27,11 @@ eval env e =
           VFun x e env
       ELet x e1 e2 ->
           eval ((x, eval env e1) : env) e2
+      ELetRec f e1 e2 ->
+          case e1 of
+            EFun x e' ->
+                let env' = (f, VFun x e' env') : env
+                 in eval env' e2
       EApp f e ->
           let z = eval env e in
           case eval env f of
