@@ -11,13 +11,13 @@ data Decl = DLet String Expr
 data Expr = EConstInt Integer
           | EConstBool Bool
           | EVar String
+          | ETuple [Expr]
           | ENot Expr
           | ENeg Expr
           | EBinop Binop Expr Expr
           | EIf Expr Expr Expr
           | ELet String Expr Expr
           | EFun String Expr
-          -- | ELetRec String [String] Expr Expr
           | EApp Expr Expr
           deriving (Show)
 
@@ -37,6 +37,7 @@ data Binop = BAnd
 data Value = VInt Integer
            | VBool Bool
            | VFun String Expr Env
+           | VTuple [Value]
            deriving (Show)
 
 type Env = [(String, Value)]
@@ -47,6 +48,7 @@ valToStr v =
       VInt n -> show n
       VBool b -> show b
       VFun {} -> "<fun>"
+      VTuple vs -> "(" ++ valToStr (head vs) ++ concatMap (\v -> ", " ++ valToStr v) (tail vs) ++ ")"
 
 nameOfDecl :: Decl -> String
 nameOfDecl d =

@@ -29,6 +29,7 @@ languageDef =
            , Token.reservedOpNames = ["+", "-", "*", "/", "="
                                      , "&&", "||", "not"
                                      , "->"
+                                     , "(", ",", ")"
                                      , "<", ">", "<=", ">="
                                      ]
            , Token.caseSensitive    = True
@@ -114,7 +115,8 @@ term = try appExpr
 appExpr =
     (\l -> if length l == 1 then head l else foldl1 EApp l) <$> many1 atom
 
-atom =  parens expr
+atom =  (\x y -> ETuple $ x : y) <$> (reservedOp "(" *> expr) <*> many1 (reservedOp "," *> expr) <* reservedOp ")"
+    <|> parens expr
     <|> EVar <$> identifier
     <|> EConstInt <$> natural
     <|> (reserved "true"  >> return (EConstBool True ))

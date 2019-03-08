@@ -10,6 +10,8 @@ eval env e =
       EVar x ->
           case lookup x env of
             Just v -> v
+      ETuple es ->
+          VTuple $ map (eval env) es
       ENot e' ->
           case eval env e' of
             VBool b -> VBool $ not b

@@ -3,6 +3,7 @@ module Type where
 data Ty = TInt
         | TBool
         | TFun Ty Ty
+        | TTuple [Ty]
         | TVar String
         deriving (Show)
 
@@ -18,3 +19,4 @@ tyToStr t =
       TBool -> "bool"
       TFun ts t -> tyToStr ts ++ " -> " ++ tyToStr t
       TVar a -> a
+      TTuple ts -> "(" ++ tyToStr (head ts) ++ concatMap (\t -> " * " ++ tyToStr t) (tail ts) ++ ")"
