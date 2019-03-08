@@ -94,9 +94,6 @@ letRecExpr =
         funExpr <*>
             (reserved "in" *> expr)
 
-appExpr = try (EApp <$> atom <*> atom)
-      <|> EApp <$> atom <*> appExpr
-
 ops = [ [Prefix (reservedOp "-"  >> return ENeg)          ]
       , [Infix  (reservedOp "*"  >> return (EBinop BMul)) AssocLeft,
          Infix  (reservedOp "/"  >> return (EBinop BDiv)) AssocLeft,
@@ -113,6 +110,9 @@ ops = [ [Prefix (reservedOp "-"  >> return ENeg)          ]
 
 term = try appExpr
     <|> atom
+
+appExpr =
+    (\l -> if length l == 1 then head l else foldl1 EApp l) <$> many1 atom
 
 atom =  parens expr
     <|> EVar <$> identifier

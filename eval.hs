@@ -25,8 +25,8 @@ eval env e =
           VFun x e env
       ELet x e1 e2 ->
           eval ((x, eval env e1) : env) e2
-      EApp f x ->
-          let z = eval env x in
+      EApp f e ->
+          let z = eval env e in
           case eval env f of
             VFun x body env' -> eval ((x, z) : env') body
 

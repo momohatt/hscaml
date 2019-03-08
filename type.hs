@@ -7,8 +7,9 @@ data Ty = TInt
         deriving (Show)
 
 type Constraint = [(Ty, Ty)]
-type TyEnv = [(String, Ty)]
+type TyEnv = [(String, TySchema)]
 type Subst = [(String, Ty)]
+type TySchema = ([String], Ty)
 
 tyToStr :: Ty -> String
 tyToStr t =
