@@ -2,7 +2,7 @@
 
 toy OCaml interpreter in Haskell
 
-## Build & Usage
+## Build & Run
 ```
 $ make
 $ ./main
