@@ -28,11 +28,18 @@ getTyVars t =
       TVar x -> [x]
       TTuple xs -> concatMap getTyVars xs
 
+removeDups :: Ord a => [a] -> [a]
+removeDups l =
+    case l of
+      [] -> []
+      x : xl -> x : removeDups (filter (/= x) xl)
+
 generalize :: TyEnv -> Ty -> TySchema
 generalize env t =
-    (filter (`notElem` l2) l1, t)
+    (removeDups l3, t)
         where l1 = getTyVars t
               l2 = concatMap (getTyVars . snd . snd) env
+              l3 = filter (`notElem` l2) l1
 
 instantiate :: TySchema -> State Int Ty
 instantiate (l, t) = instantiate' l t
@@ -151,21 +158,23 @@ genConstDecl env d =
 tySubst :: Subst -> Ty -> Ty
 tySubst s t =
     case t of
-      TFun ts t ->
-          TFun (tySubst s ts) (tySubst s t)
+      TInt -> TInt
+      TBool -> TBool
+      TFun ts t -> TFun (tySubst s ts) (tySubst s t)
+      TTuple ts -> TTuple $ map (tySubst s) ts
       TVar x -> fromMaybe (TVar x) $ lookup x s
-      _ -> t
 
 compose :: Subst -> Subst -> Subst
 compose s1 s2 =
     s1 ++ map (\(v, t) -> (v, tySubst s1 t)) s2
 
-checkFv :: Ty -> String -> Bool
-checkFv t v =
+checkFv :: String -> Ty -> Bool
+checkFv v t =
     case t of
       TInt -> False
       TBool -> False
-      TFun a b -> checkFv a v || checkFv b v
+      TFun a b -> checkFv v a || checkFv v a
+      TTuple ts -> any (checkFv v) ts
       TVar a -> a == v
 
 replaceFvInCons :: String -> Ty -> Constraint -> Constraint
@@ -200,22 +209,22 @@ tyUnify c =
                 (`compose` [(a, TBool)]) <$> tyUnify newc
                     where newc = replaceFvInCons a TBool xc
             (TFun t1 t2, TVar a) ->
-                case checkFv (TFun t1 t2) a of
+                case checkFv a (TFun t1 t2) of
                   True -> Left $ "cannot unify " ++ show (fst ts) ++ " and " ++ show (snd ts)
                   False -> (`compose` [(a, TFun t1 t2)]) <$> tyUnify newc
                                where newc = replaceFvInCons a (TFun t1 t2) xc
             (TVar a, TFun t1 t2) ->
-                case checkFv (TFun t1 t2) a of
+                case checkFv a (TFun t1 t2) of
                   True -> Left $"cannot unify " ++ show (fst ts) ++ " and " ++ show (snd ts)
                   False -> (`compose` [(a, TFun t1 t2)]) <$> tyUnify newc
                                where newc = replaceFvInCons a (TFun t1 t2) xc
             (TTuple t1, TVar a) ->
-                case checkFv (TTuple t1) a of
+                case checkFv a (TTuple t1) of
                   True -> Left $"cannot unify " ++ show (fst ts) ++ " and " ++ show (snd ts)
                   False -> (`compose` [(a, TTuple t1)]) <$> tyUnify newc
                                where newc = replaceFvInCons a (TTuple t1) xc
             (TVar a, TTuple t1) ->
-                case checkFv (TTuple t1) a of
+                case checkFv a (TTuple t1) of
                   True -> Left $"cannot unify " ++ show (fst ts) ++ " and " ++ show (snd ts)
                   False -> (`compose` [(a, TTuple t1)]) <$> tyUnify newc
                                where newc = replaceFvInCons a (TTuple t1) xc

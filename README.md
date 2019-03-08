@@ -17,3 +17,13 @@ val fact : int -> int = <fun>
 # fact 10;;
 - : int = 3628800
 ```
+
+let polymorphism
+```
+# let f x = x;;
+val f : t0 -> t0 = <fun>
+# (f true, f 0);;
+- : (bool * int) = (true, 0)
+# (f f) f;;
+- : t5 -> t5 = <fun>
+```
