@@ -43,7 +43,8 @@ instantiate' l t =
       [] -> return t
       x : xl -> do
           y <- genNewTyVar
-          instantiate' xl (tySubst [(x, y)] t)
+          let xl' = filter (/= x) xl
+          instantiate' xl' (tySubst [(x, y)] t)
 
 genNewTyVar :: State Int Ty
 genNewTyVar = do
@@ -58,7 +59,8 @@ genConst env e =
       EConstInt _  -> return $ Right (TInt, [])
       EConstBool _ -> return $ Right (TBool, [])
       EVar x  -> case lookup x env of
-                  Just t -> Right . (, []) <$> instantiate t -- TODO: pattern match fail
+                  Just t -> Right . (, []) <$> instantiate t
+                  Nothing -> return $ Left $ "unknown type variable " ++ x
       ETuple es -> do
           ts <- mapM (genConst env) es
           if any isLeft ts
@@ -98,7 +100,6 @@ genConst env e =
           case r1 of
             Left msg -> return $ Left msg
             Right (t1, c1) -> do
-                -- t1 <- instantiate ts1
                 r2 <- genConst ((x, t1) : env) e2
                 return $ (\(t2, c2) -> (t2, c1 ++ c2)) <$> r2
       ELetRec x e1 e2 -> do
@@ -107,7 +108,6 @@ genConst env e =
           case r1 of
             Left msg -> return $ Left msg
             Right (t1, c1) -> do
-                -- t1 <- instantiate ts1
                 r2 <- genConst ((x, t1) : env) e2
                 return $ (\(t2, c2) -> (t2, c1 ++ c2)) <$> r2
       EApp f e -> do

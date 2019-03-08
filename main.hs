@@ -21,13 +21,13 @@ repl n tenv env = do
             return ()
         else do
             let parsedProg = parseString input
-            print parsedProg
+            -- print parsedProg
             case typeCheck n tenv parsedProg of
               Left msg -> do
                   putStrLn ("TypeError: " ++ msg)
                   repl n tenv env
               Right (t, tenv', n) -> do
-                print tenv'
+                -- print tenv'
                 -- print t
                 case parsedProg of
                   CExpr e -> do

@@ -47,7 +47,8 @@ valToStr :: Value -> String
 valToStr v =
     case v of
       VInt n -> show n
-      VBool b -> show b
+      VBool True -> "true"
+      VBool False -> "false"
       VFun {} -> "<fun>"
       VTuple vs -> "(" ++ valToStr (head vs) ++ concatMap (\v -> ", " ++ valToStr v) (tail vs) ++ ")"
 
