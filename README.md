@@ -26,4 +26,6 @@ val f : t0 -> t0 = <fun>
 - : (bool * int) = (true, 0)
 # (f f) f;;
 - : t5 -> t5 = <fun>
+# f (f f);;
+- : t9 -> t9 = <fun>
 ```

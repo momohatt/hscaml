@@ -26,7 +26,8 @@ repl n tenv env = do
               Left msg -> do
                   putStrLn ("TypeError: " ++ msg)
                   repl n tenv env
-              Right (t, tenv', n) -> do
+              Right (t, tenv', c, n) -> do
+                -- print c -- for debug
                 -- print tenv'
                 -- print t
                 case parsedProg of

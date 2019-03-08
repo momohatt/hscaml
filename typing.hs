@@ -195,7 +195,9 @@ tyUnify c =
                 tyUnify $ zip ts1 ts2 ++ xc
             (TVar x1, TVar x2)
               | x1 == x2 -> tyUnify xc
-              | otherwise -> ((x1, TVar x2) :) <$> tyUnify xc
+              | otherwise ->
+                  (`compose` [(x1, TVar x2)]) <$> tyUnify newc
+                      where newc = replaceFvInCons x1 (TVar x2) xc
             (TInt, TVar a) ->
                 (`compose` [(a, TInt)]) <$> tyUnify newc
                     where newc = replaceFvInCons a TInt xc
@@ -230,14 +232,14 @@ tyUnify c =
                                where newc = replaceFvInCons a (TTuple t1) xc
             _ -> Left $ "cannot unify " ++ show (fst ts) ++ " and " ++ show (snd ts)
 
-typeCheck :: Int -> TyEnv -> Command -> Either String (Ty, TyEnv, Int)
+typeCheck :: Int -> TyEnv -> Command -> Either String (Ty, TyEnv, Subst, Int)
 typeCheck n tenv c =
     case c of
       CExpr e ->
           case r of
             Left msg -> Left msg
             Right (ts, const) ->
-                (\s -> (tySubst s ts, tenv, n')) <$> tyUnify const
+                (\s -> (tySubst s ts, tenv, s, n')) <$> tyUnify const
           where (r, n') = runState (genConst tenv e) n
       CDecl d ->
           case r of
@@ -245,5 +247,5 @@ typeCheck n tenv c =
             Right (ts, const) ->
                 (\sigma ->
                     let ts' = tySchemaSubst sigma ts in
-                        (snd ts', (nameOfDecl d, ts') : tenv, n')) <$> tyUnify const
+                        (snd ts', (nameOfDecl d, ts') : tenv, sigma, n')) <$> tyUnify const
           where (r, n') = runState (genConstDecl tenv d) n
