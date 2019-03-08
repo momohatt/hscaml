@@ -21,15 +21,14 @@ eval env e =
       EIf e1 e2 e3 ->
           case eval env e1 of
             VBool b -> if b then eval env e2 else eval env e3
+      EFun x e ->
+          VFun x e env
       ELet x e1 e2 ->
           eval ((x, eval env e1) : env) e2
-      ELetRec f xs e1 e2 ->
-          eval env' e2
-          where env' = (f, VFun f xs env' e1) : env
-      EApp f ys ->
-          let zs = map (eval env) ys in
+      EApp f x ->
+          let z = eval env x in
           case eval env f of
-            VFun _ xs env' body -> eval (zip xs zs ++ env') body
+            VFun x body env' -> eval ((x, z) : env') body
 
 evalBinOp :: Binop -> Value -> Value -> Value
 evalBinOp op =
@@ -55,9 +54,12 @@ evalBinOp op =
 evalDecl :: Env -> Decl -> (Env, Value)
 evalDecl env e =
     case e of
-      DLet x e' ->
+      DLet x e ->
           ((x, val) : env, val)
-              where val = eval env e'
-      DLetRec f xs e' ->
-          let env' = (f, VFun f xs env' e') : env in
-              (env', VFun f xs env' e')
+              where val = eval env e
+      DLetRec f e ->
+          case e of
+            EFun x e' ->
+                let env' = (f, VFun x e' env') : env
+                    val = VFun x e' env'
+                 in ((f, val) : env, val)

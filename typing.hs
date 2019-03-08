@@ -42,31 +42,29 @@ genConst env e =
           (t2, c2) <- genConst env e2
           (t3, c3) <- genConst env e3
           return (t2, [(t1, TBool), (t2, t3)] ++ c1 ++ c2 ++ c3)
+      EFun x e -> do
+          t <- genNewTyVar
+          (t1, c1) <- genConst ((x, t) : env) e
+          return (TFun t t1, c1)
       ELet x e1 e2 -> do
           (t1, c1) <- genConst env e1
           (t2, c2) <- genConst ((x, t1) : env) e2
           return (t2, c1 ++ c2)
-      ELetRec f xs e1 e2 -> do
-          ts <- mapM (const genNewTyVar) xs
-          tr <- genNewTyVar
-          let env' = (f, TFun ts tr) : env
-          (t1, c1) <- genConst (zip xs ts ++ env') e1
-          (t2, c2) <- genConst env' e2
-          return (TFun ts tr, (tr, t1) : c1 ++ c2)
-      EApp f es -> do
+      EApp f x -> do
           (tf, cf) <- genConst env f
-          (ts, cs) <- unzip <$> mapM (genConst env) es
+          (tx, cx) <- genConst env x
+          -- (ts, cs) <- unzip <$> mapM (genConst env) es
           case tf of
-            TFun tfa tfr -> return (tfr, zip tfa ts ++ cf ++ concat cs)
+            TFun tf1 tf2 -> return (tf2, (tf1, tx) : cf ++ cx)
             TVar t -> do
                 tr <- genNewTyVar
-                return (tr, (TVar t, TFun ts tr) : cf ++ concat cs)
+                return (tr, (tf, TFun tx tr) : cf ++ cx)
 
 tySubst :: Subst -> Ty -> Ty
 tySubst s t =
     case t of
       TFun ts t ->
-          TFun (map (tySubst s) ts) (tySubst s t)
+          TFun (tySubst s ts) (tySubst s t)
       TVar x -> fromMaybe (TVar x) $ lookup x s
       _ -> t
 
@@ -79,7 +77,7 @@ checkFv t v =
     case t of
       TInt -> False
       TBool -> False
-      TFun a b -> any (`checkFv` v) a || checkFv b v
+      TFun a b -> checkFv a v || checkFv b v
       TVar a -> a == v
 
 replaceFvInCons :: String -> Ty -> Constraint -> Constraint
@@ -95,7 +93,7 @@ tyUnify c =
             (TInt, TInt) -> tyUnify xc
             (TBool, TBool) -> tyUnify xc
             (TFun s1 t1, TFun s2 t2) ->
-                tyUnify $ zip s1 s2 ++ [(t1, t2)] ++ xc
+                tyUnify $ [(s1, s2), (t1, t2)] ++ xc
             (TVar x1, TVar x2)
               | x1 == x2 -> tyUnify xc
               | otherwise -> ((x1, TVar x2) :) <$> tyUnify xc
@@ -127,12 +125,10 @@ genConstDecl :: TyEnv -> Decl -> State Int (Ty, Constraint)
 genConstDecl env d =
     case d of
       DLet x e -> genConst env e
-      DLetRec f xs e -> do
-          ts <- mapM (const genNewTyVar) xs
-          tr <- genNewTyVar
-          let env' = (f, TFun ts tr) : env
-          (t, c) <- genConst (zip xs ts ++ env') e
-          return (TFun ts tr, (tr, t) : c)
+      DLetRec f e -> do
+          t <- genNewTyVar
+          (t1, c1) <- genConst ((f, t) : env) e
+          return (t1, (t, t1) : c1)
 
 typeCheck :: Int -> TyEnv -> Command -> Either String (Ty, TyEnv, Int)
 typeCheck n tenv c =

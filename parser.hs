@@ -23,10 +23,12 @@ languageDef =
                                      , "let"
                                      , "rec"
                                      , "in"
+                                     , "fun"
                                      , ";;"
                                      ]
            , Token.reservedOpNames = ["+", "-", "*", "/", "="
                                      , "&&", "||", "not"
+                                     , "->"
                                      , "<", ">", "<=", ">="
                                      ]
            , Token.caseSensitive    = True
@@ -57,17 +59,22 @@ letDecl =
         (reserved "let" *> identifier) <*>
             (reserved "=" *> expr)
 
-letRecDecl =
-    DLetRec <$>
-        (reserved "let" *> reserved "rec" *> identifier) <*>
-            many1 identifier <*>
-                (reservedOp "=" *> expr)
+letRecDecl = DLetRec <$> (reserved "let" *> reserved "rec" *> identifier) <*> funExpr
+
+funExpr = try (EFun <$> (identifier <* reservedOp "=") <*> expr)
+       <|> EFun <$> identifier <*> funExpr
+
+absFunExpr = try (EFun <$> (reserved "fun" *> identifier) <*> (reservedOp "->" *> expr))
+          <|> EFun <$> (reserved "fun" *> identifier) <*> absFunExpr'
+
+absFunExpr' = try (EFun <$> identifier <*> (reservedOp "->" *> expr))
+           <|> EFun <$> identifier <*> absFunExpr'
 
 expr :: Parser Expr
 expr =  try ifExpr
     <|> try letExpr
     <|> try letRecExpr
-    <|> try appExpr
+    <|> try absFunExpr
     <|> buildExpressionParser ops term
 
 ifExpr =
@@ -83,14 +90,12 @@ letExpr =
                 (reserved "in" *> expr)
 
 letRecExpr =
-    ELetRec <$>
-        (reserved "let" *> reserved "rec" *> identifier) <*>
-            many1 identifier <*>
-                (reservedOp "=" *> expr) <*>
-                    (reserved "in" *> expr)
+    ELet <$> (reserved "let" *> reserved "rec" *> identifier) <*>
+        funExpr <*>
+            (reserved "in" *> expr)
 
-appExpr =
-    EApp <$> term <*> many1 term
+appExpr = try (EApp <$> atom <*> atom)
+      <|> EApp <$> atom <*> appExpr
 
 ops = [ [Prefix (reservedOp "-"  >> return ENeg)          ]
       , [Infix  (reservedOp "*"  >> return (EBinop BMul)) AssocLeft,
@@ -106,7 +111,10 @@ ops = [ [Prefix (reservedOp "-"  >> return ENeg)          ]
          Infix  (reservedOp "<=" >> return (EBinop BLE )) AssocLeft]
        ]
 
-term =  parens expr
+term = try appExpr
+    <|> atom
+
+atom =  parens expr
     <|> EVar <$> identifier
     <|> EConstInt <$> natural
     <|> (reserved "true"  >> return (EConstBool True ))

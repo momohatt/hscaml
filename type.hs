@@ -2,7 +2,7 @@ module Type where
 
 data Ty = TInt
         | TBool
-        | TFun [Ty] Ty   -- arguments are uncurried
+        | TFun Ty Ty
         | TVar String
         deriving (Show)
 
@@ -15,5 +15,5 @@ tyToStr t =
     case t of
       TInt -> "int"
       TBool -> "bool"
-      TFun ts t -> concatMap ((++ " -> ") . tyToStr) ts ++ tyToStr t
+      TFun ts t -> tyToStr ts ++ " -> " ++ tyToStr t
       TVar a -> a

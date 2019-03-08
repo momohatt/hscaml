@@ -5,7 +5,7 @@ data Command = CExpr Expr
              deriving (Show)
 
 data Decl = DLet String Expr
-          | DLetRec String [String] Expr
+          | DLetRec String Expr
     deriving (Show)
 
 data Expr = EConstInt Integer
@@ -16,8 +16,9 @@ data Expr = EConstInt Integer
           | EBinop Binop Expr Expr
           | EIf Expr Expr Expr
           | ELet String Expr Expr
-          | ELetRec String [String] Expr Expr
-          | EApp Expr [Expr]
+          | EFun String Expr
+          -- | ELetRec String [String] Expr Expr
+          | EApp Expr Expr
           deriving (Show)
 
 data Binop = BAnd
@@ -35,7 +36,7 @@ data Binop = BAnd
 
 data Value = VInt Integer
            | VBool Bool
-           | VFun String [String] Env Expr
+           | VFun String Expr Env
            deriving (Show)
 
 type Env = [(String, Value)]
@@ -51,4 +52,4 @@ nameOfDecl :: Decl -> String
 nameOfDecl d =
     case d of
       DLet x _ -> x
-      DLetRec x _ _ -> x
+      DLetRec x _ -> x

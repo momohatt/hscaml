@@ -9,8 +9,8 @@ import Eval (eval, evalDecl)
 import Type
 import Typing
 
-initEnv = [("a", VInt 100)]
-initTenv = [("a", TInt)]
+initEnv = []
+initTenv = []
 
 repl :: Int -> TyEnv -> Env -> IO ()
 repl n tenv env = do
@@ -21,7 +21,7 @@ repl n tenv env = do
             return ()
         else do
             let parsedProg = parseString input
-            -- print parsedProg
+            print parsedProg
             case typeCheck n tenv parsedProg of
               Left msg -> do
                   putStrLn ("TypeError: " ++ msg)
