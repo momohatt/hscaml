@@ -1,4 +1,11 @@
-module Type where
+module Type
+    ( Ty(..)
+    , Constraint
+    , TyEnv
+    , Subst
+    , TySchema
+    , tyToStr
+    ) where
 
 data Ty = TInt
         | TBool

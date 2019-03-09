@@ -1,4 +1,7 @@
-module Eval where
+module Eval
+    ( eval
+    , evalDecl
+    ) where
 
 import Syntax
 

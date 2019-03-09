@@ -1,4 +1,13 @@
-module Syntax where
+module Syntax
+    ( Command(..)
+    , Decl(..)
+    , Expr(..)
+    , Binop(..)
+    , Value(..)
+    , Env
+    , valToStr
+    , nameOfDecl
+    ) where
 
 data Command = CExpr Expr
              | CDecl Decl

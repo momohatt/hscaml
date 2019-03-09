@@ -1,4 +1,6 @@
-module Parser where
+module Parser
+    ( parseString
+    ) where
 
 import System.IO
 import Control.Monad

@@ -4,8 +4,8 @@ import System.IO
 import Control.Exception
 
 import Syntax
-import Parser (parseString)
-import Eval (eval, evalDecl)
+import Parser
+import Eval
 import Type
 import Typing
 

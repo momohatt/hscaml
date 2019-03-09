@@ -1,6 +1,8 @@
 {-# LANGUAGE TupleSections #-}
 
-module Typing where
+module Typing
+    ( typeCheck
+    ) where
 
 import Control.Monad.State
 import Data.Maybe
