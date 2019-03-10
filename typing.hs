@@ -137,25 +137,18 @@ genConstDecl env d =
     case d of
       DLet x e -> do
           r <- genConst env e
-          case r of
-            Right (t, c) ->
-                case tyUnify c of
-                  Right sigma -> do
-                      let t' = generalize env $ tySubst sigma t
-                      return $ Right (t', (t, snd t') : c)
-                  Left msg -> return $ Left msg
-            Left msg -> return $ Left msg
+          return $ helper r
       DLetRec f e -> do
           t <- genNewTyVar
           r <- genConst ((f, ([], t)) : env) e
-          case r of
-            Right (t, c) ->
-                case tyUnify c of
-                  Right sigma -> do
-                      let t' = generalize env $ tySubst sigma t
-                      return $ Right (t', (t, snd t') : c)
-                  Left msg -> return $ Left msg
-            Left msg -> return $ Left msg
+          return $ helper r
+    where
+        helper :: Either String (Ty, Constraint) -> Either String (TySchema, Constraint)
+        helper r = do
+            (t, c) <- r
+            sigma <- tyUnify c
+            let t' = generalize env $ tySubst sigma t
+            return (t', (t, snd t') : c)
 
 tySubst :: Subst -> Ty -> Ty
 tySubst s t =
@@ -237,17 +230,14 @@ tyUnify c =
 typeCheck :: Int -> TyEnv -> Command -> Either String (Ty, TyEnv, Subst, Int)
 typeCheck n tenv c =
     case c of
-      CExpr e ->
-          case r of
-            Left msg -> Left msg
-            Right (ts, const) ->
-                (\s -> (tySubst s ts, tenv, s, n')) <$> tyUnify const
-          where (r, n') = runState (genConst tenv e) n
-      CDecl d ->
-          case r of
-            Left msg -> Left msg
-            Right (ts, const) ->
-                (\sigma ->
-                    let ts' = tySchemaSubst sigma ts in
-                        (snd ts', (nameOfDecl d, ts') : tenv, sigma, n')) <$> tyUnify const
-          where (r, n') = runState (genConstDecl tenv d) n
+      CExpr e -> do
+          let (r, n') = runState (genConst tenv e) n
+          (ts, const) <- r
+          s <- tyUnify const
+          return (tySubst s ts, tenv, s, n')
+      CDecl d -> do
+          let (r, n') = runState (genConstDecl tenv d) n
+          (ts, const) <- r
+          sigma <- tyUnify const
+          let ts' = tySchemaSubst sigma ts
+          return (snd ts', (nameOfDecl d, ts') : tenv, sigma, n')
