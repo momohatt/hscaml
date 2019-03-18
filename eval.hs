@@ -15,6 +15,10 @@ eval env e =
             Just v -> v
       ETuple es ->
           VTuple $ map (eval env) es
+      ENil ->
+          VNil
+      ECons e1 e2 ->
+          VCons (eval env e1) (eval env e2)
       ENot e' ->
           case eval env e' of
             VBool b -> VBool $ not b

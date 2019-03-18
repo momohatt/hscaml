@@ -77,6 +77,14 @@ genConst env e =
              else do
                  let (tys, cons) = unzip $ rights ts
                  return $ Right (TTuple tys, concat cons)
+      ENil -> do
+          t <- genNewTyVar
+          return $ Right (TList t, [])
+      ECons e1 e2 -> do
+          r1 <- genConst env e1
+          r2 <- genConst env e2
+          return $ (\(t1, c1) (t2, c2) ->
+              (TList t1, (TList t1, t2) : c1 ++ c2)) <$> r1 <*> r2
       ENot e' -> do
           r <- genConst env e'
           return $ (\(t, c) -> (TBool, (t, TBool) : c)) <$> r
@@ -157,6 +165,7 @@ tySubst s t =
       TBool -> TBool
       TFun ts t -> TFun (tySubst s ts) (tySubst s t)
       TTuple ts -> TTuple $ map (tySubst s) ts
+      TList t -> TList $ tySubst s t
       TVar x -> fromMaybe (TVar x) $ lookup x s
 
 compose :: Subst -> Subst -> Subst
@@ -188,6 +197,8 @@ tyUnify c =
                 tyUnify $ [(s1, s2), (t1, t2)] ++ xc
             (TTuple ts1, TTuple ts2) ->
                 tyUnify $ zip ts1 ts2 ++ xc
+            (TList t1, TList t2) ->
+                tyUnify $ (t1, t2) : xc
             (TVar x1, TVar x2)
               | x1 == x2 -> tyUnify xc
               | otherwise ->
@@ -212,19 +223,29 @@ tyUnify c =
                                where newc = replaceFvInCons a (TFun t1 t2) xc
             (TVar a, TFun t1 t2) ->
                 case checkFv a (TFun t1 t2) of
-                  True -> Left $"cannot unify " ++ show (fst ts) ++ " and " ++ show (snd ts)
+                  True -> Left $ "cannot unify " ++ show (fst ts) ++ " and " ++ show (snd ts)
                   False -> (`compose` [(a, TFun t1 t2)]) <$> tyUnify newc
                                where newc = replaceFvInCons a (TFun t1 t2) xc
             (TTuple t1, TVar a) ->
                 case checkFv a (TTuple t1) of
-                  True -> Left $"cannot unify " ++ show (fst ts) ++ " and " ++ show (snd ts)
+                  True -> Left $ "cannot unify " ++ show (fst ts) ++ " and " ++ show (snd ts)
                   False -> (`compose` [(a, TTuple t1)]) <$> tyUnify newc
                                where newc = replaceFvInCons a (TTuple t1) xc
             (TVar a, TTuple t1) ->
                 case checkFv a (TTuple t1) of
-                  True -> Left $"cannot unify " ++ show (fst ts) ++ " and " ++ show (snd ts)
+                  True -> Left $ "cannot unify " ++ show (fst ts) ++ " and " ++ show (snd ts)
                   False -> (`compose` [(a, TTuple t1)]) <$> tyUnify newc
                                where newc = replaceFvInCons a (TTuple t1) xc
+            (TList t1, TVar a) ->
+                case checkFv a (TList t1) of
+                  True -> Left $ "cannot unify " ++ show (fst ts) ++ " and " ++ show (snd ts)
+                  False -> (`compose` [(a, TList t1)]) <$> tyUnify newc
+                               where newc = replaceFvInCons a (TList t1) xc
+            (TVar a, TList t1) ->
+                case checkFv a (TList t1) of
+                  True -> Left $ "cannot unify " ++ show (fst ts) ++ " and " ++ show (snd ts)
+                  False -> (`compose` [(a, TList t1)]) <$> tyUnify newc
+                               where newc = replaceFvInCons a (TList t1) xc
             _ -> Left $ "cannot unify " ++ show (fst ts) ++ " and " ++ show (snd ts)
 
 typeCheck :: Int -> TyEnv -> Command -> Either String (Ty, TyEnv, Subst, Int)

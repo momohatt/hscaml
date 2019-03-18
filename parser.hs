@@ -32,6 +32,7 @@ languageDef =
                                      , "&&", "||", "not"
                                      , "->"
                                      , "(", ",", ")"
+                                     , "[", "::", ";", "]"
                                      , "<", ">", "<=", ">="
                                      ]
            , Token.caseSensitive    = True
@@ -76,6 +77,7 @@ expr =  try ifExpr
     <|> try letExpr
     <|> try letRecExpr
     <|> try absFunExpr
+    <|> try listExpr
     <|> buildExpressionParser ops term
 
 ifExpr = EIf <$>
@@ -90,6 +92,9 @@ letRecExpr =
     ELetRec <$> (reserved "let" *> reserved "rec" *> identifier) <*>
         funExpr <*>
             (reserved "in" *> expr)
+
+listExpr = try (ENil <$ reserved "[]")
+       <|> ECons <$> term <*> (reserved "::" *> listExpr)
 
 ops = [ [Prefix (reservedOp "-"  >> return ENeg)          ]
       , [Infix  (reservedOp "*"  >> return (EBinop BMul)) AssocLeft,

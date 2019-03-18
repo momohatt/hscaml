@@ -21,6 +21,8 @@ data Expr = EConstInt Integer
           | EConstBool Bool
           | EVar String
           | ETuple [Expr]
+          | ENil
+          | ECons Expr Expr
           | ENot Expr
           | ENeg Expr
           | EBinop Binop Expr Expr
@@ -48,6 +50,8 @@ data Value = VInt Integer
            | VBool Bool
            | VFun String Expr Env
            | VTuple [Value]
+           | VNil
+           | VCons Value Value
            deriving (Show)
 
 type Env = [(String, Value)]
@@ -60,6 +64,8 @@ valToStr v =
       VBool False -> "false"
       VFun {} -> "<fun>"
       VTuple vs -> "(" ++ valToStr (head vs) ++ concatMap (\v -> ", " ++ valToStr v) (tail vs) ++ ")"
+      VNil -> "[]"
+      VCons v1 v2 -> valToStr v1 ++ " :: " ++ valToStr v2
 
 nameOfDecl :: Decl -> String
 nameOfDecl d =
