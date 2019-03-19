@@ -65,7 +65,10 @@ valToStr v =
       VFun {} -> "<fun>"
       VTuple vs -> "(" ++ valToStr (head vs) ++ concatMap (\v -> ", " ++ valToStr v) (tail vs) ++ ")"
       VNil -> "[]"
-      VCons v1 v2 -> valToStr v1 ++ " :: " ++ valToStr v2
+      VCons v1 v2 -> "[" ++ valToStr v1 ++ listToStr' v2
+        where listToStr' v = case v of
+                               VNil -> "]"
+                               VCons v1 v2 -> "; " ++ valToStr v1 ++ listToStr' v2
 
 nameOfDecl :: Decl -> String
 nameOfDecl d =

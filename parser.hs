@@ -78,6 +78,7 @@ expr =  try ifExpr
     <|> try letRecExpr
     <|> try absFunExpr
     <|> try listExpr
+    <|> try listSugarExpr
     <|> buildExpressionParser ops term
 
 ifExpr = EIf <$>
@@ -93,8 +94,12 @@ letRecExpr =
         funExpr <*>
             (reserved "in" *> expr)
 
-listExpr = try (ENil <$ reserved "[]")
+listExpr = try (ENil <$ (reservedOp "[" <* reservedOp "]"))
        <|> ECons <$> term <*> (reserved "::" *> listExpr)
+
+listSugarExpr = try (ECons <$> (reservedOp "[" *> expr) <*> listSugarExpr)
+            <|> try (ECons <$> (reservedOp ";" *> expr) <*> listSugarExpr)
+            <|> (`ECons` ENil) <$> (reservedOp ";" *> expr <* reservedOp "]")
 
 ops = [ [Prefix (reservedOp "-"  >> return ENeg)          ]
       , [Infix  (reservedOp "*"  >> return (EBinop BMul)) AssocLeft,

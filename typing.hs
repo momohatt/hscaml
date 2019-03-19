@@ -29,6 +29,7 @@ getTyVars t =
       TFun x y -> getTyVars x ++ getTyVars y
       TVar x -> [x]
       TTuple xs -> concatMap getTyVars xs
+      TList x -> getTyVars x
 
 removeDups :: Ord a => [a] -> [a]
 removeDups l =
@@ -179,6 +180,7 @@ checkFv v t =
       TBool -> False
       TFun a b -> checkFv v a || checkFv v a
       TTuple ts -> any (checkFv v) ts
+      TList t -> checkFv v t
       TVar a -> a == v
 
 replaceFvInCons :: String -> Ty -> Constraint -> Constraint
