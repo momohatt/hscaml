@@ -29,3 +29,10 @@ val f : t0 -> t0 = <fun>
 # f (f f);;
 - : t9 -> t9 = <fun>
 ```
+
+pattern match
+```
+# match (1, 2) with
+  | (x, y) -> x + y;;
+- : int = 3
+```

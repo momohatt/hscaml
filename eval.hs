@@ -23,6 +23,7 @@ findMatch p v = case (p, v) of
     (PNil, VNil)           -> return []
     (PCons h t, VCons h' t') ->
       (++) <$> findMatch h h' <*> findMatch t t'
+    _ -> Nothing
 
 eval :: Env -> Expr -> Value
 eval env e =
