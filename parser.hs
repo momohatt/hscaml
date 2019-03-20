@@ -53,35 +53,34 @@ parser = whiteSpace >> command
 
 command :: Parser Command
 command =  try (CExpr <$> expr <* reservedOp ";;")  -- need 'try' for letDecl and letExpr
-       <|> (CDecl <$> decl <* reservedOp ";;")
+       <|>     (CDecl <$> decl <* reservedOp ";;")
 
 decl :: Parser Decl
 decl =  try letDecl
-    <|> letRecDecl
+    <|>     letRecDecl
 
 letDecl = try (DLet <$> (reserved "let" *> identifier) <*> (reserved "=" *> expr))
-      <|> DLet <$> (reserved "let" *> identifier) <*> funExpr
+      <|>      DLet <$> (reserved "let" *> identifier) <*> funExpr
 
 letRecDecl = DLetRec <$> (reserved "let" *> reserved "rec" *> identifier) <*> funExpr
 
 funExpr = try (EFun <$> (identifier <* reservedOp "=") <*> expr)
-      <|> EFun <$> identifier <*> funExpr
+      <|>      EFun <$> identifier <*> funExpr
 
 absFunExpr = try (EFun <$> (reserved "fun" *> identifier) <*> (reservedOp "->" *> expr))
-         <|> EFun <$> (reserved "fun" *> identifier) <*> absFunExpr'
+         <|>      EFun <$> (reserved "fun" *> identifier) <*> absFunExpr'
 
 absFunExpr' = try (EFun <$> identifier <*> (reservedOp "->" *> expr))
-          <|> EFun <$> identifier <*> absFunExpr'
+          <|>      EFun <$> identifier <*> absFunExpr'
 
 expr :: Parser Expr
-expr =  try ifExpr
+expr =      ifExpr
+    <|>     absFunExpr
     <|> try letExpr
-    <|> try letRecExpr
-    <|> try absFunExpr
+    <|>     letRecExpr
     <|> try listExpr
-    <|> try listSugarExpr
-    <|> try matchExpr
-    <|> buildExpressionParser ops term
+    <|>     matchExpr
+    <|>     buildExpressionParser ops term
 
 ifExpr = EIf <$>
         (reserved "if" *> expr) <*>
@@ -89,7 +88,7 @@ ifExpr = EIf <$>
                 (reserved "else" *> expr)
 
 letExpr = try (ELet <$> (reserved "let" *> identifier) <*> (reservedOp "=" *> expr) <*> (reserved "in" *> expr))
-      <|> ELet <$> (reserved "let" *> identifier) <*> funExpr <*> (reserved "in" *> expr)
+      <|>      ELet <$> (reserved "let" *> identifier) <*> funExpr <*> (reserved "in" *> expr)
 
 letRecExpr =
     ELetRec <$> (reserved "let" *> reserved "rec" *> identifier) <*>
@@ -97,11 +96,11 @@ letRecExpr =
             (reserved "in" *> expr)
 
 listExpr = try (ENil <$ (reservedOp "[" <* reservedOp "]"))
-       <|> ECons <$> term <*> (reserved "::" *> listExpr)
+       <|>      ECons <$> term <*> (reserved "::" *> listExpr)
 
 listSugarExpr = try (ECons <$> (reservedOp "[" *> expr) <*> listSugarExpr)
             <|> try (ECons <$> (reservedOp ";" *> expr) <*> listSugarExpr)
-            <|> (`ECons` ENil) <$> (reservedOp ";" *> expr <* reservedOp "]")
+            <|>     (`ECons` ENil) <$> (reservedOp ";" *> expr <* reservedOp "]")
 
 matchExpr =
   EMatch <$>
@@ -109,20 +108,23 @@ matchExpr =
       (reserved "with" *> matchListExpr)
 
 matchListExpr =
-  try ((:) <$> ((,) <$> (reservedOp "|" *> readPattern) <*> (reservedOp "->" *> expr)) <*> matchListExpr')
+      ((:) <$> ((,) <$> (reservedOp "|" *> readPattern) <*> (reservedOp "->" *> expr)) <*> matchListExpr')
   <|> ((:) <$> ((,) <$> readPattern                     <*> (reservedOp "->" *> expr)) <*> matchListExpr')
 
 matchListExpr' =
-  try ((:) <$> ((,) <$> (reservedOp "|" *> readPattern) <*> (reservedOp "->" *> expr)) <*> matchListExpr')
-  <|> pure []
+      ((:) <$> ((,) <$> (reservedOp "|" *> readPattern) <*> (reservedOp "->" *> expr)) <*> matchListExpr')
+  <|> return []
 
-readPattern = try ((\x y -> PTuple $ x : y) <$> (reservedOp "(" *> readPattern) <*> many1 (reservedOp "," *> readPattern) <* reservedOp ")")
-    <|> try (PVar <$> identifier)
-    <|> try (PInt <$> natural)
-    <|> try (reserved "true"  >> return (PBool True ))
-    <|> try (reserved "false" >> return (PBool False))
-    <|> PNil <$ (reservedOp "[" *> reservedOp "]")
-    <|> PCons <$> readPattern <*> (reservedOp "::" *> readPattern)
+readPattern = try readPatternAtom
+              <|> PCons <$> readPatternAtom <*> (reservedOp "::" *> readPatternAtom)
+
+readPatternAtom =     try ((\x y -> PTuple $ x : y) <$> (reservedOp "(" *> readPattern) <*> many1 (reservedOp "," *> readPattern) <* reservedOp ")")
+                  <|>     PVar <$> identifier
+                  <|>     PInt <$> natural
+                  <|>     (reserved "true"  >> return (PBool True ))
+                  <|>     (reserved "false" >> return (PBool False))
+                  <|>     PNil <$ (reservedOp "[" *> reservedOp "]")
+
 
 ops = [ [Prefix (reservedOp "-"  >> return ENeg)          ]
       , [Infix  (reservedOp "*"  >> return (EBinop BMul)) AssocLeft,
@@ -139,17 +141,18 @@ ops = [ [Prefix (reservedOp "-"  >> return ENeg)          ]
        ]
 
 term = try appExpr
-    <|> atom
+   <|>     atom
 
 appExpr =
     (\l -> if length l == 1 then head l else foldl1 EApp l) <$> many1 atom
 
 atom =  try ((\x y -> ETuple $ x : y) <$> (reservedOp "(" *> expr) <*> many1 (reservedOp "," *> expr) <* reservedOp ")")
-    <|> parens expr
-    <|> EVar <$> identifier
-    <|> EConstInt <$> natural
-    <|> (reserved "true"  >> return (EConstBool True ))
-    <|> (reserved "false" >> return (EConstBool False))
+    <|>     parens expr
+    <|>     listSugarExpr
+    <|>     EVar <$> identifier
+    <|>     EConstInt <$> natural
+    <|>     (reserved "true"  >> return (EConstBool True ))
+    <|>     (reserved "false" >> return (EConstBool False))
 
 parseString :: String -> Command
 parseString str =
