@@ -2,6 +2,7 @@
 
 module Main where
 
+import Control.DeepSeq
 import Data.Char (isSpace)
 import System.Console.Haskeline
 import System.IO
@@ -40,26 +41,27 @@ repl input' n tenv env = do
             else do
               let parsedProg = parseString (input' ++ input)
               -- outputStrLn $ show parsedProg
-              case typeCheck n tenv parsedProg of
-                Left msg -> do
-                    outputStrLn ("TypeError: " ++ msg)
-                    repl "" n tenv env
-                Right (t, tenv', c, n) -> do
-                  -- outputStrLn $ show c -- for debug
-                  -- outputStrLn $ show tenv'
-                  -- outputStrLn $ show t
-                  case parsedProg of
-                    CExpr e -> do
-                        outputStrLn $ "- : " ++ tyToStr t ++ " = " ++ valToStr (eval env e)
-                        repl "" n tenv' env
-                    CDecl e -> do
-                        let (env', v) = evalDecl env e
-                        outputStrLn $ "val " ++ nameOfDecl e ++ " : " ++ tyToStr t ++ " = " ++ valToStr v
-                        repl "" n tenv' env'
-              `catch`
-              (\((EvalErr msg) :: EvalErr) -> do
-                  outputStrLn msg
-                  repl "" n tenv env)
+                  (t, tenv', c, n) = typeCheck n tenv parsedProg
+              -- outputStrLn $ show c -- for debug
+              -- outputStrLn $ show tenv'
+              -- outputStrLn $ show t
+              deepseq c $ -- force tyUnify
+                case parsedProg of
+                  CExpr e -> do
+                      outputStrLn $ "- : " ++ tyToStr t ++ " = " ++ valToStr (eval env e)
+                      repl "" n tenv' env
+                  CDecl e -> do
+                      let (env', v) = evalDecl env e
+                      outputStrLn $ "val " ++ nameOfDecl e ++ " : " ++ tyToStr t ++ " = " ++ valToStr v
+                      repl "" n tenv' env'
+              `catches`
+              [ Handler $ \((EvalErr msg) :: EvalErr) -> do
+                  outputStrLn $ "Eval error: " ++ msg
+                  repl "" n tenv env
+              , Handler $ \((TypeErr msg) :: TypeErr) -> do
+                  outputStrLn $ "Type error: " ++ msg
+                  repl "" n tenv env
+              ]
       where
         prompt = if null input' then "# " else "  "
 

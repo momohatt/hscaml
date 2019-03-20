@@ -2,14 +2,18 @@
 
 module Typing
     ( typeCheck
+    , TypeErr(..)
     ) where
 
 import Control.Monad.State
+import Control.Exception
 import Data.Maybe
-import Data.Either
 
 import Syntax
 import Type
+
+data TypeErr = TypeErr String deriving (Show)
+instance Exception TypeErr
 
 tySchemaSubst :: Subst -> TySchema -> TySchema
 tySchemaSubst s sc =
@@ -63,102 +67,79 @@ genNewTyVar = do
     return $ TVar $ "t" ++ show i
 
 -- generate constraint
-genConst :: TyEnv -> Expr -> State Int (Either String (Ty, Constraint))
+genConst :: TyEnv -> Expr -> State Int (Ty, Constraint)
 genConst env e =
     case e of
-      EConstInt _  -> return $ Right (TInt, [])
-      EConstBool _ -> return $ Right (TBool, [])
+      EConstInt _  -> return (TInt, [])
+      EConstBool _ -> return (TBool, [])
       EVar x  -> case lookup x env of
-                  Just t -> Right . (, []) <$> instantiate t
-                  Nothing -> return $ Left $ "unknown type variable " ++ x
+                   Just t -> (, []) <$> instantiate t
+                   Nothing -> throw $ TypeErr $ "unknown type variable " ++ x
       ETuple es -> do
-          ts <- mapM (genConst env) es
-          if any isLeft ts
-             then return $ Left $ head $ lefts ts
-             else do
-                 let (tys, cons) = unzip $ rights ts
-                 return $ Right (TTuple tys, concat cons)
+        ts <- mapM (genConst env) es
+        let (tys, cons) = unzip ts
+        return (TTuple tys, concat cons)
       ENil -> do
-          t <- genNewTyVar
-          return $ Right (TList t, [])
+        t <- genNewTyVar
+        return (TList t, [])
       ECons e1 e2 -> do
-          r1 <- genConst env e1
-          r2 <- genConst env e2
-          return $ (\(t1, c1) (t2, c2) ->
-              (TList t1, (TList t1, t2) : c1 ++ c2)) <$> r1 <*> r2
+        (t1, c1) <- genConst env e1
+        (t2, c2) <- genConst env e2
+        return (TList t1, (TList t1, t2) : c1 ++ c2)
       ENot e' -> do
-          r <- genConst env e'
-          return $ (\(t, c) -> (TBool, (t, TBool) : c)) <$> r
+        (t, c) <- genConst env e'
+        return (TBool, (t, TBool) : c)
       ENeg e' -> do
-          r <- genConst env e'
-          return $ (\(t, c) -> (TInt, (t, TInt) : c)) <$> r
+        (t, c) <- genConst env e'
+        return (TInt, (t, TInt) : c)
       EBinop op e1 e2 -> do
-          r1 <- genConst env e1
-          r2 <- genConst env e2
-          return $ (\(t1, c1) (t2, c2) ->
-              case () of
-                _ | op `elem` [BAnd, BOr] ->
-                    (TBool, [(t1, TBool), (t2, TBool)] ++ c1 ++ c2)
-                  | op `elem` [BAdd, BSub, BMul, BDiv] ->
-                    (TInt, [(t1, TInt), (t2, TInt)] ++ c1 ++ c2)
-                  | otherwise ->
-                    (TBool, (t1, t2) : c1 ++ c2)) <$> r1 <*> r2
+        (t1, c1) <- genConst env e1
+        (t2, c2) <- genConst env e2
+        case () of
+          _ | op `elem` [BAnd, BOr] ->
+              return (TBool, [(t1, TBool), (t2, TBool)] ++ c1 ++ c2)
+            | op `elem` [BAdd, BSub, BMul, BDiv] ->
+              return (TInt, [(t1, TInt), (t2, TInt)] ++ c1 ++ c2)
+            | otherwise ->
+              return (TBool, (t1, t2) : c1 ++ c2)
       EIf e1 e2 e3 -> do
-          r1 <- genConst env e1
-          r2 <- genConst env e2
-          r3 <- genConst env e3
-          return $ (\(t1, c1) (t2, c2) (t3, c3) ->
-              (t2, [(t1, TBool), (t2, t3)] ++ c1 ++ c2 ++ c3)) <$> r1 <*> r2 <*> r3
+        (t1, c1) <- genConst env e1
+        (t2, c2) <- genConst env e2
+        (t3, c3) <- genConst env e3
+        return (t2, [(t1, TBool), (t2, t3)] ++ c1 ++ c2 ++ c3)
       EFun x e -> do
-          t <- genNewTyVar
-          r <- genConst ((x, ([], t)) : env) e
-          return $ (\(t1, c1) -> (TFun t t1, c1)) <$> r
+        t <- genNewTyVar
+        (t1, c1) <- genConst ((x, ([], t)) : env) e
+        return (TFun t t1, c1)
       ELet x e1 e2 -> do
-          r1 <- genConstDecl env (DLet x e1)
-          case r1 of
-            Left msg -> return $ Left msg
-            Right (t1, c1) -> do
-                r2 <- genConst ((x, t1) : env) e2
-                return $ (\(t2, c2) -> (t2, c1 ++ c2)) <$> r2
+        (t1, c1) <- genConstDecl env (DLet x e1)
+        (t2, c2) <- genConst ((x, t1) : env) e2
+        return (t2, c1 ++ c2)
       ELetRec x e1 e2 -> do
-          t <- genNewTyVar
-          r1 <- genConstDecl ((x, ([], t)) : env) (DLet x e1)
-          case r1 of
-            Left msg -> return $ Left msg
-            Right (t1, c1) -> do
-                r2 <- genConst ((x, t1) : env) e2
-                return $ (\(t2, c2) -> (t2, c1 ++ c2)) <$> r2
+        t <- genNewTyVar
+        (t1, c1) <- genConstDecl ((x, ([], t)) : env) (DLet x e1)
+        (t2, c2) <- genConst ((x, t1) : env) e2
+        return (t2, c1 ++ c2)
       EApp f e -> do
-          r1 <- genConst env f
-          r2 <- genConst env e
-          case (r1, r2) of
-            (Right (t1, c1), Right (t2, c2)) ->
-              case t1 of
-                TFun tf tt -> return $ Right (tt, (t2, tf) : c1 ++ c2)
-                TVar t -> do
-                    tr <- genNewTyVar
-                    return $ Right (tr, (t1, TFun t2 tr) : c1 ++ c2)
-            (Left _, _) -> return r1
-            (_, Left _) -> return r2
+        (t1, c1) <- genConst env f
+        (t2, c2) <- genConst env e
+        case t1 of
+          TFun tf tt -> return (tt, (t2, tf) : c1 ++ c2)
+          TVar t -> do
+              tr <- genNewTyVar
+              return (tr, (t1, TFun t2 tr) : c1 ++ c2)
       EMatch e ps -> do
-          r <- genConst env e
-          case r of
-            Left msg -> return $ Left msg
-            Right (t, c) -> do
-              a <- genNewTyVar -- new type variable for expression
-              tmp <- mapM helper ps
-              case sequenceA tmp of
-                Left msg -> return $ Left msg
-                Right list -> do
-                  let (tp, te, cons) = unzip3 list
-                      newcons = map (, t) tp ++ map (, a) te
-                  return $ Right (a, c ++ concat cons ++ newcons)
-            where
-              helper :: (Pattern, Expr) -> State Int (Either String (Ty, Ty, Constraint))
-              helper (p, expr) = do
-                (tp, cons, env') <- genConstPattern p
-                r <- genConst (env' ++ env) expr
-                return $ (\(te, cons') -> (tp, te, cons ++ cons')) <$> r
+        (t, c) <- genConst env e
+        a <- genNewTyVar -- new type variable for expression
+        (tp, te, cons) <- unzip3 <$> mapM helper ps
+        let newcons = map (, t) tp ++ map (, a) te
+        return (a, c ++ concat cons ++ newcons)
+        where
+          helper :: (Pattern, Expr) -> State Int (Ty, Ty, Constraint)
+          helper (p, expr) = do
+            (tp, cons, env') <- genConstPattern p
+            (te, cons') <- genConst (env' ++ env) expr
+            return (tp, te, cons ++ cons')
 
 genConstPattern :: Pattern -> State Int (Ty, Constraint, TyEnv)
 genConstPattern p =
@@ -180,7 +161,7 @@ genConstPattern p =
         t <- genNewTyVar
         return (TList t, [(t, t1), (TList t, t2)] ++ c1 ++ c2, e1 ++ e2)
 
-genConstDecl :: TyEnv -> Decl -> State Int (Either String (TySchema, Constraint))
+genConstDecl :: TyEnv -> Decl -> State Int (TySchema, Constraint)
 genConstDecl env d =
     case d of
       DLet x e -> do
@@ -191,12 +172,11 @@ genConstDecl env d =
           r <- genConst ((f, ([], t)) : env) e
           return $ helper r
     where
-        helper :: Either String (Ty, Constraint) -> Either String (TySchema, Constraint)
-        helper r = do
-            (t, c) <- r
-            sigma <- tyUnify c
-            let t' = generalize env $ tySubst sigma t
-            return (t', (t, snd t') : c)
+        helper :: (Ty, Constraint) -> (TySchema, Constraint)
+        helper (t, c) =
+          let sigma = tyUnify c
+              t' = generalize env $ tySubst sigma t
+           in (t', (t, snd t') : c)
 
 tySubst :: Subst -> Ty -> Ty
 tySubst s t =
@@ -226,10 +206,10 @@ replaceFvInCons :: String -> Ty -> Constraint -> Constraint
 replaceFvInCons v t =
     map (\(t1, t2) -> (tySubst [(v, t)] t1, tySubst [(v, t)] t2))
 
-tyUnify :: Constraint -> Either String Subst
+tyUnify :: Constraint -> Subst
 tyUnify c =
     case c of
-      [] -> Right []
+      [] -> []
       ts : xc ->
           case ts of
             (TInt, TInt) -> tyUnify xc
@@ -238,70 +218,70 @@ tyUnify c =
                 tyUnify $ [(s1, s2), (t1, t2)] ++ xc
             (TTuple ts1, TTuple ts2) ->
                 if length ts1 /= length ts2
-                   then Left $ "cannot unify " ++ show (fst ts) ++ " and " ++ show (snd ts)
+                   then throw $ TypeErr $ "cannot unify " ++ show (fst ts) ++ " and " ++ show (snd ts)
                    else tyUnify $ zip ts1 ts2 ++ xc
             (TList t1, TList t2) ->
                 tyUnify $ (t1, t2) : xc
             (TVar x1, TVar x2)
               | x1 == x2 -> tyUnify xc
               | otherwise ->
-                  (`compose` [(x1, TVar x2)]) <$> tyUnify newc
+                  (`compose` [(x1, TVar x2)]) $ tyUnify newc
                       where newc = replaceFvInCons x1 (TVar x2) xc
             (TInt, TVar a) ->
-                (`compose` [(a, TInt)]) <$> tyUnify newc
+                (`compose` [(a, TInt)]) $ tyUnify newc
                     where newc = replaceFvInCons a TInt xc
             (TVar a, TInt) ->
-                (`compose` [(a, TInt)]) <$> tyUnify newc
+                (`compose` [(a, TInt)]) $ tyUnify newc
                     where newc = replaceFvInCons a TInt xc
             (TBool, TVar a) ->
-                (`compose` [(a, TBool)]) <$> tyUnify newc
+                (`compose` [(a, TBool)]) $ tyUnify newc
                     where newc = replaceFvInCons a TBool xc
             (TVar a, TBool) ->
-                (`compose` [(a, TBool)]) <$> tyUnify newc
+                (`compose` [(a, TBool)]) $ tyUnify newc
                     where newc = replaceFvInCons a TBool xc
             (TFun t1 t2, TVar a) ->
                 case checkFv a (TFun t1 t2) of
-                  True -> Left $ "cannot unify " ++ show (fst ts) ++ " and " ++ show (snd ts)
-                  False -> (`compose` [(a, TFun t1 t2)]) <$> tyUnify newc
+                  True -> throw $ TypeErr $ "cannot unify " ++ show (fst ts) ++ " and " ++ show (snd ts)
+                  False -> (`compose` [(a, TFun t1 t2)]) $ tyUnify newc
                                where newc = replaceFvInCons a (TFun t1 t2) xc
             (TVar a, TFun t1 t2) ->
                 case checkFv a (TFun t1 t2) of
-                  True -> Left $ "cannot unify " ++ show (fst ts) ++ " and " ++ show (snd ts)
-                  False -> (`compose` [(a, TFun t1 t2)]) <$> tyUnify newc
+                  True -> throw $ TypeErr $ "cannot unify " ++ show (fst ts) ++ " and " ++ show (snd ts)
+                  False -> (`compose` [(a, TFun t1 t2)]) $ tyUnify newc
                                where newc = replaceFvInCons a (TFun t1 t2) xc
             (TTuple t1, TVar a) ->
                 case checkFv a (TTuple t1) of
-                  True -> Left $ "cannot unify " ++ show (fst ts) ++ " and " ++ show (snd ts)
-                  False -> (`compose` [(a, TTuple t1)]) <$> tyUnify newc
+                  True -> throw $ TypeErr $ "cannot unify " ++ show (fst ts) ++ " and " ++ show (snd ts)
+                  False -> (`compose` [(a, TTuple t1)]) $ tyUnify newc
                                where newc = replaceFvInCons a (TTuple t1) xc
             (TVar a, TTuple t1) ->
                 case checkFv a (TTuple t1) of
-                  True -> Left $ "cannot unify " ++ show (fst ts) ++ " and " ++ show (snd ts)
-                  False -> (`compose` [(a, TTuple t1)]) <$> tyUnify newc
+                  True -> throw $ TypeErr $ "cannot unify " ++ show (fst ts) ++ " and " ++ show (snd ts)
+                  False -> (`compose` [(a, TTuple t1)]) $ tyUnify newc
                                where newc = replaceFvInCons a (TTuple t1) xc
             (TList t1, TVar a) ->
                 case checkFv a (TList t1) of
-                  True -> Left $ "cannot unify " ++ show (fst ts) ++ " and " ++ show (snd ts)
-                  False -> (`compose` [(a, TList t1)]) <$> tyUnify newc
+                  True -> throw $ TypeErr $ "cannot unify " ++ show (fst ts) ++ " and " ++ show (snd ts)
+                  False -> (`compose` [(a, TList t1)]) $ tyUnify newc
                                where newc = replaceFvInCons a (TList t1) xc
             (TVar a, TList t1) ->
                 case checkFv a (TList t1) of
-                  True -> Left $ "cannot unify " ++ show (fst ts) ++ " and " ++ show (snd ts)
-                  False -> (`compose` [(a, TList t1)]) <$> tyUnify newc
+                  True -> throw $ TypeErr $ "cannot unify " ++ show (fst ts) ++ " and " ++ show (snd ts)
+                  False -> (`compose` [(a, TList t1)]) $ tyUnify newc
                                where newc = replaceFvInCons a (TList t1) xc
-            _ -> Left $ "cannot unify " ++ show (fst ts) ++ " and " ++ show (snd ts)
+            _ -> throw $ TypeErr $ "cannot unify " ++ show (fst ts) ++ " and " ++ show (snd ts)
 
-typeCheck :: Int -> TyEnv -> Command -> Either String (Ty, TyEnv, Subst, Int)
+typeCheck :: Int -> TyEnv -> Command -> (Ty, TyEnv, Subst, Int)
 typeCheck n tenv c =
     case c of
-      CExpr e -> do
+      CExpr e ->
           let (r, n') = runState (genConst tenv e) n
-          (ts, const) <- r
-          s <- tyUnify const
-          return (tySubst s ts, tenv, s, n')
-      CDecl d -> do
+              (ts, const) = r
+              s = tyUnify const
+           in (tySubst s ts, tenv, s, n')
+      CDecl d ->
           let (r, n') = runState (genConstDecl tenv d) n
-          (ts, const) <- r
-          sigma <- tyUnify const
-          let ts' = tySchemaSubst sigma ts
-          return (snd ts', (nameOfDecl d, ts') : tenv, sigma, n')
+              (ts, const) = r
+              sigma = tyUnify const
+              ts' = tySchemaSubst sigma ts
+           in (snd ts', (nameOfDecl d, ts') : tenv, sigma, n')

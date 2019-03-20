@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric, DeriveAnyClass #-}
 module Type
     ( Ty(..)
     , Constraint
@@ -7,13 +8,16 @@ module Type
     , tyToStr
     ) where
 
+import Control.DeepSeq
+import GHC.Generics (Generic)
+
 data Ty = TInt
         | TBool
         | TFun Ty Ty
         | TTuple [Ty]
         | TList Ty
         | TVar String
-        deriving (Show)
+        deriving (Show, Generic, NFData)
 
 type Constraint = [(Ty, Ty)]
 type TyEnv = [(String, TySchema)]
