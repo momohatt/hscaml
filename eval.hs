@@ -1,11 +1,16 @@
 module Eval
     ( eval
     , evalDecl
+    , EvalErr(..)
     ) where
 
+import Control.Exception
 import Control.Monad
 
 import Syntax
+
+data EvalErr = EvalErr String deriving (Show)
+instance Exception EvalErr
 
 findMatch :: Pattern -> Value -> Maybe Env
 findMatch p v = case (p, v) of
@@ -27,6 +32,7 @@ eval env e =
       EVar x ->
           case lookup x env of
             Just v -> v
+            Nothing -> throw $ EvalErr $ "Unknown variable " ++ x
       ETuple es ->
           VTuple $ map (eval env) es
       ENil ->
@@ -64,7 +70,7 @@ eval env e =
               val = eval env e
               helper :: [(Pattern, Expr)] -> (Env, Expr)
               helper ps = case ps of
-                  [] -> error "Match failure"
+                  [] -> throw $ EvalErr "Match Failure"
                   (p, exp) : px -> case findMatch p val of
                       Just env -> (env, exp)
                       Nothing -> helper px

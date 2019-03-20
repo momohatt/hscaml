@@ -1,6 +1,7 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Main where
 
-import Control.Exception
 import Data.Char (isSpace)
 import System.Console.Haskeline
 import System.IO
@@ -55,6 +56,10 @@ repl input' n tenv env = do
                         let (env', v) = evalDecl env e
                         outputStrLn $ "val " ++ nameOfDecl e ++ " : " ++ tyToStr t ++ " = " ++ valToStr v
                         repl "" n tenv' env'
+              `catch`
+              (\((EvalErr msg) :: EvalErr) -> do
+                  outputStrLn msg
+                  repl "" n tenv env)
       where
         prompt = if null input' then "# " else "  "
 
