@@ -26,11 +26,12 @@ languageDef =
                                      , "rec"
                                      , "in"
                                      , "fun"
-                                     , ";;"
+                                     , "match"
+                                     , "with"
                                      ]
            , Token.reservedOpNames = ["+", "-", "*", "/", "="
                                      , "&&", "||", "not"
-                                     , "->"
+                                     , "->" , ";;", "|"
                                      , "(", ",", ")"
                                      , "[", "::", ";", "]"
                                      , "<", ">", "<=", ">="
@@ -51,8 +52,8 @@ parser :: Parser Command
 parser = whiteSpace >> command
 
 command :: Parser Command
-command =  try (CExpr <$> expr <* reserved ";;")  -- need 'try' for letDecl and letExpr
-       <|> (CDecl <$> decl <* reserved ";;")
+command =  try (CExpr <$> expr <* reservedOp ";;")  -- need 'try' for letDecl and letExpr
+       <|> (CDecl <$> decl <* reservedOp ";;")
 
 decl :: Parser Decl
 decl =  try letDecl
@@ -79,6 +80,7 @@ expr =  try ifExpr
     <|> try absFunExpr
     <|> try listExpr
     <|> try listSugarExpr
+    <|> try matchExpr
     <|> buildExpressionParser ops term
 
 ifExpr = EIf <$>
@@ -100,6 +102,27 @@ listExpr = try (ENil <$ (reservedOp "[" <* reservedOp "]"))
 listSugarExpr = try (ECons <$> (reservedOp "[" *> expr) <*> listSugarExpr)
             <|> try (ECons <$> (reservedOp ";" *> expr) <*> listSugarExpr)
             <|> (`ECons` ENil) <$> (reservedOp ";" *> expr <* reservedOp "]")
+
+matchExpr =
+  EMatch <$>
+    (reserved "match" *> expr) <*>
+      (reserved "with" *> matchListExpr)
+
+matchListExpr =
+  try ((:) <$> ((,) <$> (reservedOp "|" *> readPattern) <*> (reservedOp "->" *> expr)) <*> matchListExpr')
+  <|> ((:) <$> ((,) <$> readPattern                     <*> (reservedOp "->" *> expr)) <*> matchListExpr')
+
+matchListExpr' =
+  try ((:) <$> ((,) <$> (reservedOp "|" *> readPattern) <*> (reservedOp "->" *> expr)) <*> matchListExpr')
+  <|> pure []
+
+readPattern = try ((\x y -> PTuple $ x : y) <$> (reservedOp "(" *> readPattern) <*> many1 (reservedOp "," *> readPattern) <* reservedOp ")")
+    <|> try (PVar <$> identifier)
+    <|> try (PInt <$> natural)
+    <|> try (reserved "true"  >> return (PBool True ))
+    <|> try (reserved "false" >> return (PBool False))
+    <|> PNil <$ (reservedOp "[" *> reservedOp "]")
+    <|> PCons <$> readPattern <*> (reservedOp "::" *> readPattern)
 
 ops = [ [Prefix (reservedOp "-"  >> return ENeg)          ]
       , [Infix  (reservedOp "*"  >> return (EBinop BMul)) AssocLeft,

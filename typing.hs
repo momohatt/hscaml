@@ -140,6 +140,45 @@ genConst env e =
                     return $ Right (tr, (t1, TFun t2 tr) : c1 ++ c2)
             (Left _, _) -> return r1
             (_, Left _) -> return r2
+      EMatch e ps -> do
+          r <- genConst env e
+          case r of
+            Left msg -> return $ Left msg
+            Right (t, c) -> do
+              a <- genNewTyVar -- new type variable for expression
+              tmp <- mapM helper ps
+              case sequenceA tmp of
+                Left msg -> return $ Left msg
+                Right list -> do
+                  let (tp, te, cons) = unzip3 list
+                      newcons = map (, t) tp ++ map (, a) te
+                  return $ Right (a, c ++ concat cons ++ newcons)
+            where
+              helper :: (Pattern, Expr) -> State Int (Either String (Ty, Ty, Constraint))
+              helper (p, expr) = do
+                (tp, cons, env') <- genConstPattern p
+                r <- genConst (env' ++ env) expr
+                return $ (\(te, cons') -> (tp, te, cons ++ cons')) <$> r
+
+genConstPattern :: Pattern -> State Int (Ty, Constraint, TyEnv)
+genConstPattern p =
+    case p of
+      PInt _ -> return (TInt, [], [])
+      PBool _ -> return (TBool, [], [])
+      PVar x -> do
+        t <- genNewTyVar
+        return (t, [], [(x, ([], t))])
+      PTuple ts -> do
+        (ts', cons', envs') <- unzip3 <$> mapM genConstPattern ts
+        return (TTuple ts', concat cons', concat envs')
+      PNil -> do
+        t <- genNewTyVar
+        return (t, [], [])
+      PCons p1 p2 -> do
+        (t1, c1, e1) <- genConstPattern p1
+        (t2, c2, e2) <- genConstPattern p2
+        t <- genNewTyVar
+        return (TList t, [(t, t1), (TList t, t2)] ++ c1 ++ c2, e1 ++ e2)
 
 genConstDecl :: TyEnv -> Decl -> State Int (Either String (TySchema, Constraint))
 genConstDecl env d =
@@ -198,7 +237,9 @@ tyUnify c =
             (TFun s1 t1, TFun s2 t2) ->
                 tyUnify $ [(s1, s2), (t1, t2)] ++ xc
             (TTuple ts1, TTuple ts2) ->
-                tyUnify $ zip ts1 ts2 ++ xc
+                if length ts1 /= length ts2
+                   then Left $ "cannot unify " ++ show (fst ts) ++ " and " ++ show (snd ts)
+                   else tyUnify $ zip ts1 ts2 ++ xc
             (TList t1, TList t2) ->
                 tyUnify $ (t1, t2) : xc
             (TVar x1, TVar x2)

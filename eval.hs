@@ -3,7 +3,21 @@ module Eval
     , evalDecl
     ) where
 
+import Control.Monad
+
 import Syntax
+
+findMatch :: Pattern -> Value -> Maybe Env
+findMatch p v = case (p, v) of
+    (PInt a, VInt b)       -> if a == b then return [] else Nothing
+    (PBool a, VBool b)     -> if a == b then return [] else Nothing
+    (PVar a, _)            -> return [(a, v)]
+    (PTuple ps, VTuple vs) ->
+      if length ps /= length vs then Nothing
+                                else concat <$> zipWithM findMatch ps vs
+    (PNil, VNil)           -> return []
+    (PCons h t, VCons h' t') ->
+      (++) <$> findMatch h h' <*> findMatch t t'
 
 eval :: Env -> Expr -> Value
 eval env e =
@@ -43,6 +57,17 @@ eval env e =
           let z = eval env e in
           case eval env f of
             VFun x body env' -> eval ((x, z) : env') body
+      EMatch e ps ->
+          let (env', expr) = helper ps in
+          eval (env' ++ env) expr
+            where
+              val = eval env e
+              helper :: [(Pattern, Expr)] -> (Env, Expr)
+              helper ps = case ps of
+                  [] -> error "Match failure"
+                  (p, exp) : px -> case findMatch p val of
+                      Just env -> (env, exp)
+                      Nothing -> helper px
 
 evalBinOp :: Binop -> Value -> Value -> Value
 evalBinOp op =

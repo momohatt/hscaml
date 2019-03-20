@@ -2,6 +2,7 @@ module Syntax
     ( Command(..)
     , Decl(..)
     , Expr(..)
+    , Pattern(..)
     , Binop(..)
     , Value(..)
     , Env
@@ -31,7 +32,16 @@ data Expr = EConstInt Integer
           | ELetRec String Expr Expr
           | EFun String Expr
           | EApp Expr Expr
+          | EMatch Expr [(Pattern, Expr)]
           deriving (Show)
+
+data Pattern = PInt Integer
+             | PBool Bool
+             | PVar String
+             | PTuple [Pattern]
+             | PNil
+             | PCons Pattern Pattern
+             deriving (Show)
 
 data Binop = BAnd
            | BOr
