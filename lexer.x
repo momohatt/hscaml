@@ -27,6 +27,12 @@ tokens :-
   $digit+                               { lex (TokenInt . read) }
   $alpha [$alpha $digit \_ \']*         { lex  TokenVar         }
   \=                                    { lex' TokenEq          }
+  \<                                    { lex' TokenLT          }
+  \>                                    { lex' TokenGT          }
+  \<\=                                  { lex' TokenLE          }
+  \>\=                                  { lex' TokenGE          }
+  \&\&                                  { lex' TokenAndAnd      }
+  \|\|                                  { lex' TokenOrOr        }
   \+                                    { lex' TokenPlus        }
   \-                                    { lex' TokenMinus       }
   \*                                    { lex' TokenTimes       }
@@ -59,6 +65,12 @@ data TokenClass
   | TokenInt Integer
   | TokenVar String
   | TokenEq
+  | TokenLT
+  | TokenGT
+  | TokenLE
+  | TokenGE
+  | TokenAndAnd
+  | TokenOrOr
   | TokenPlus
   | TokenMinus
   | TokenTimes
@@ -76,6 +88,12 @@ unLex TokenIn = "in"
 unLex (TokenInt i) = show i
 unLex (TokenVar s) = show s
 unLex TokenEq = "="
+unLex TokenLT = "<"
+unLex TokenGT = ">"
+unLex TokenLE = "<="
+unLex TokenGE = ">="
+unLex TokenAndAnd = "&&"
+unLex TokenOrOr = "||"
 unLex TokenPlus = "+"
 unLex TokenMinus = "-"
 unLex TokenTimes = "*"
