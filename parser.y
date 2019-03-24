@@ -7,10 +7,6 @@ import Lexer
 
 }
 
--- The expression language used here comes straight from the happy
--- documentation with virtually no changes (open, so TokenOB/TokenCB were
--- changed to TokenLParen/TokenRParen
-
 %name parse
 %tokentype { Token }
 %monad { Alex }
@@ -20,10 +16,11 @@ import Lexer
 
 %right let in
 %right if then else
-%right fun arrow
-%left oror
-%left andand
-%left '<' '>' '=' le ge
+%right fun "->"
+%left "||"
+%left "&&"
+%left '<' '>' '=' "<=" ">="
+%right "::"
 %left '+' '-'
 %left '*' '/'
 
@@ -35,29 +32,36 @@ import Lexer
       then            { Token _ TokenThen }
       else            { Token _ TokenElse }
       fun             { Token _ TokenFun }
-      arrow           { Token _ TokenArrow }
+      "->"            { Token _ TokenArrow }
+      true            { Token _ TokenTrue }
+      false           { Token _ TokenFalse }
       int             { Token _ (TokenInt $$) }
       var             { Token _ (TokenVar $$) }
-      semisemi        { Token _ TokenSemiSemi }
+      ";;"            { Token _ TokenSemiSemi }
       '='             { Token _ TokenEq }
       '<'             { Token _ TokenLT }
       '>'             { Token _ TokenGT }
-      le              { Token _ TokenLE }
-      ge              { Token _ TokenGE }
-      andand          { Token _ TokenAndAnd }
-      oror            { Token _ TokenOrOr }
+      "<="            { Token _ TokenLE }
+      ">="            { Token _ TokenGE }
+      "&&"            { Token _ TokenAndAnd }
+      "||"            { Token _ TokenOrOr }
       '+'             { Token _ TokenPlus }
       '-'             { Token _ TokenMinus }
       '*'             { Token _ TokenTimes }
       '/'             { Token _ TokenDiv }
       '('             { Token _ TokenLParen }
       ')'             { Token _ TokenRParen }
+      '['             { Token _ TokenLBracket }
+      ']'             { Token _ TokenRBracket }
+      "::"            { Token _ TokenColonColon }
+      ';'             { Token _ TokenSemi }
+      ','             { Token _ TokenComma }
 
 %%
 
 Command :
-    Expr semisemi   { CExpr $1 }
-  | Decl semisemi   { CDecl $1 }
+    Expr ";;"  { CExpr $1 }
+  | Decl ";;"  { CDecl $1 }
 
 Decl :
     let     var      '=' Expr  { DLet $2 $4 }
@@ -72,28 +76,43 @@ Args :
 Expr :
     Decl in Expr                { ELetIn $1 $3 }
   | if Expr then Expr else Expr { EIf $2 $4 $6 }
-  | fun Args arrow Expr         { $2 $4 }
-  | Expr '+'    Expr            { EBinop BAdd $1 $3 }
-  | Expr '-'    Expr            { EBinop BSub $1 $3 }
-  | Expr '*'    Expr            { EBinop BMul $1 $3 }
-  | Expr '/'    Expr            { EBinop BDiv $1 $3 }
-  | Expr '='    Expr            { EBinop BEq  $1 $3 }
-  | Expr '<'    Expr            { EBinop BLT  $1 $3 }
-  | Expr '>'    Expr            { EBinop BGT  $1 $3 }
-  | Expr le     Expr            { EBinop BLE  $1 $3 }
-  | Expr ge     Expr            { EBinop BGE  $1 $3 }
-  | Expr andand Expr            { EBinop BAnd $1 $3 }
-  | Expr oror   Expr            { EBinop BOr  $1 $3 }
+  | fun Args "->" Expr          { $2 $4 }
+  | Expr "::" Expr              { ECons $1 $3 }
+  | Expr '+'  Expr              { EBinop BAdd $1 $3 }
+  | Expr '-'  Expr              { EBinop BSub $1 $3 }
+  | Expr '*'  Expr              { EBinop BMul $1 $3 }
+  | Expr '/'  Expr              { EBinop BDiv $1 $3 }
+  | Expr '='  Expr              { EBinop BEq  $1 $3 }
+  | Expr '<'  Expr              { EBinop BLT  $1 $3 }
+  | Expr '>'  Expr              { EBinop BGT  $1 $3 }
+  | Expr "<=" Expr              { EBinop BLE  $1 $3 }
+  | Expr ">=" Expr              { EBinop BGE  $1 $3 }
+  | Expr "&&" Expr              { EBinop BAnd $1 $3 }
+  | Expr "||" Expr              { EBinop BOr  $1 $3 }
   | AppExpr                     { $1 }
 
 AppExpr :
     AppExpr Atom { EApp $1 $2 }
   | Atom         { $1 }
 
+Tuple1 :
+    Expr ',' Expr   { [$1, $3] }
+  | Expr ',' Tuple1 { $1 : $3 }
+
+List1 :
+    Expr ';' List1 { ECons $1 $3 }
+  | Expr           { ECons $1 ENil }
+  | Expr ';'       { ECons $1 ENil }
+
 Atom :
-    int           { EConstInt $1 }
-  | var           { EVar $1 }
-  | '(' Expr ')'  { $2 }
+    int            { EConstInt $1 }
+  | var            { EVar $1 }
+  | true           { EConstBool True }
+  | false          { EConstBool False }
+  | '(' Tuple1 ')' { ETuple $2 }
+  | '(' Expr ')'   { $2 }
+  | '[' ']'        { ENil }
+  | '[' List1 ']'  { $2 }
 
 {
 lexwrap :: (Token -> Alex a) -> Alex a

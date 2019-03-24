@@ -30,6 +30,8 @@ tokens :-
   else                           { lex' TokenElse        }
   fun                            { lex' TokenFun         }
   \-\>                           { lex' TokenArrow       }
+  true                           { lex' TokenTrue        }
+  false                          { lex' TokenFalse       }
   $digit+                        { lex (TokenInt . read) }
   $alpha [$alpha $digit \_ \']*  { lex  TokenVar         }
   \=                             { lex' TokenEq          }
@@ -45,6 +47,11 @@ tokens :-
   \/                             { lex' TokenDiv         }
   \(                             { lex' TokenLParen      }
   \)                             { lex' TokenRParen      }
+  \[                             { lex' TokenLBracket    }
+  \]                             { lex' TokenRBracket    }
+  \,                             { lex' TokenComma       }
+  \;                             { lex' TokenSemi        }
+  \:\:                           { lex' TokenColonColon  }
   \;\;                           { lex' TokenSemiSemi    }
 
 {
@@ -74,6 +81,8 @@ data TokenClass
   | TokenElse
   | TokenFun
   | TokenArrow
+  | TokenTrue
+  | TokenFalse
   | TokenInt Integer
   | TokenVar String
   | TokenEq
@@ -89,6 +98,11 @@ data TokenClass
   | TokenDiv
   | TokenLParen
   | TokenRParen
+  | TokenLBracket
+  | TokenRBracket
+  | TokenComma
+  | TokenSemi
+  | TokenColonColon
   | TokenSemiSemi
   | TokenEOF
   deriving ( Show )
@@ -103,6 +117,8 @@ unLex TokenThen = "then"
 unLex TokenElse = "else"
 unLex TokenFun = "fun"
 unLex TokenArrow = "->"
+unLex TokenTrue = "true"
+unLex TokenFalse = "false"
 unLex (TokenInt i) = show i
 unLex (TokenVar s) = show s
 unLex TokenEq = "="
@@ -118,7 +134,12 @@ unLex TokenTimes = "*"
 unLex TokenDiv = "/"
 unLex TokenLParen = "("
 unLex TokenRParen = ")"
+unLex TokenLBracket = "["
+unLex TokenRBracket = "]"
+unLex TokenComma = ","
 unLex TokenEOF = "<EOF>"
+unLex TokenSemi = ";"
+unLex TokenColonColon = "::"
 unLex TokenSemiSemi = ";;"
 
 alexEOF :: Alex Token
