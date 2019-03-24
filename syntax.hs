@@ -28,8 +28,7 @@ data Expr = EConstInt Integer
           | ENeg Expr
           | EBinop Binop Expr Expr
           | EIf Expr Expr Expr
-          | ELet String Expr Expr
-          | ELetRec String Expr Expr
+          | ELetIn Decl Expr
           | EFun String Expr
           | EApp Expr Expr
           | EMatch Expr [(Pattern, Expr)]

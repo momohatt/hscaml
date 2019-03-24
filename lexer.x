@@ -21,25 +21,31 @@ $digit = 0-9
 $alpha = [A-Za-z]
 
 tokens :-
-  $white+                               ;
-  let                                   { lex' TokenLet         }
-  in                                    { lex' TokenIn          }
-  $digit+                               { lex (TokenInt . read) }
-  $alpha [$alpha $digit \_ \']*         { lex  TokenVar         }
-  \=                                    { lex' TokenEq          }
-  \<                                    { lex' TokenLT          }
-  \>                                    { lex' TokenGT          }
-  \<\=                                  { lex' TokenLE          }
-  \>\=                                  { lex' TokenGE          }
-  \&\&                                  { lex' TokenAndAnd      }
-  \|\|                                  { lex' TokenOrOr        }
-  \+                                    { lex' TokenPlus        }
-  \-                                    { lex' TokenMinus       }
-  \*                                    { lex' TokenTimes       }
-  \/                                    { lex' TokenDiv         }
-  \(                                    { lex' TokenLParen      }
-  \)                                    { lex' TokenRParen      }
-  \;\;                                  { lex' TokenSemiSemi    }
+  $white+                        ;
+  let                            { lex' TokenLet         }
+  rec                            { lex' TokenRec         }
+  in                             { lex' TokenIn          }
+  if                             { lex' TokenIf          }
+  then                           { lex' TokenThen        }
+  else                           { lex' TokenElse        }
+  fun                            { lex' TokenFun         }
+  \-\>                           { lex' TokenArrow       }
+  $digit+                        { lex (TokenInt . read) }
+  $alpha [$alpha $digit \_ \']*  { lex  TokenVar         }
+  \=                             { lex' TokenEq          }
+  \<                             { lex' TokenLT          }
+  \>                             { lex' TokenGT          }
+  \<\=                           { lex' TokenLE          }
+  \>\=                           { lex' TokenGE          }
+  \&\&                           { lex' TokenAndAnd      }
+  \|\|                           { lex' TokenOrOr        }
+  \+                             { lex' TokenPlus        }
+  \-                             { lex' TokenMinus       }
+  \*                             { lex' TokenTimes       }
+  \/                             { lex' TokenDiv         }
+  \(                             { lex' TokenLParen      }
+  \)                             { lex' TokenRParen      }
+  \;\;                           { lex' TokenSemiSemi    }
 
 {
 -- To improve error messages, We keep the path of the file we are
@@ -61,7 +67,13 @@ data Token = Token AlexPosn TokenClass
 
 data TokenClass
   = TokenLet
+  | TokenRec
   | TokenIn
+  | TokenIf
+  | TokenThen
+  | TokenElse
+  | TokenFun
+  | TokenArrow
   | TokenInt Integer
   | TokenVar String
   | TokenEq
@@ -84,7 +96,13 @@ data TokenClass
 -- For nice parser error messages.
 unLex :: TokenClass -> String
 unLex TokenLet = "let"
+unLex TokenRec = "rec"
 unLex TokenIn = "in"
+unLex TokenIf = "if"
+unLex TokenThen = "then"
+unLex TokenElse = "else"
+unLex TokenFun = "fun"
+unLex TokenArrow = "->"
 unLex (TokenInt i) = show i
 unLex (TokenVar s) = show s
 unLex TokenEq = "="
