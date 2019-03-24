@@ -1,3 +1,5 @@
 *.hi
 *.o
 main
+lexer.hs
+parser.hs

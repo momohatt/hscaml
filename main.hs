@@ -36,26 +36,30 @@ repl input' n tenv env = do
       Just "exit" -> return ()
       Just input ->
           if not $ isInputFinished input
-            then repl (input' ++ input) n tenv env
-            else do
-              let parsedProg = parseString (input' ++ input)
-              -- outputStrLn $ show parsedProg
-              case typeCheck n tenv parsedProg of
+            then repl (input' ++ input ++ " ") n tenv env
+            else
+              case parseExpr (input' ++ input) of
                 Left msg -> do
-                    outputStrLn ("TypeError: " ++ msg)
-                    repl "" n tenv env
-                Right (t, tenv', c, n) -> do
-                  -- outputStrLn $ show c -- for debug
-                  -- outputStrLn $ show tenv'
-                  -- outputStrLn $ show t
-                  case parsedProg of
-                    CExpr e -> do
-                        outputStrLn $ "- : " ++ tyToStr t ++ " = " ++ valToStr (eval env e)
-                        repl "" n tenv' env
-                    CDecl e -> do
-                        let (env', v) = evalDecl env e
-                        outputStrLn $ "val " ++ nameOfDecl e ++ " : " ++ tyToStr t ++ " = " ++ valToStr v
-                        repl "" n tenv' env'
+                  outputStrLn ("Parse error: " ++ msg)
+                  repl "" n tenv env
+                Right parsedProg -> do
+                  -- outputStrLn $ show parsedProg
+                  case typeCheck n tenv parsedProg of
+                    Left msg -> do
+                      outputStrLn ("Type error: " ++ msg)
+                      repl "" n tenv env
+                    Right (t, tenv', c, n) -> do
+                      -- outputStrLn $ show c -- for debug
+                      -- outputStrLn $ show tenv'
+                      -- outputStrLn $ show t
+                      case parsedProg of
+                        CExpr e -> do
+                            outputStrLn $ "- : " ++ tyToStr t ++ " = " ++ valToStr (eval env e)
+                            repl "" n tenv' env
+                        CDecl e -> do
+                            let (env', v) = evalDecl env e
+                            outputStrLn $ "val " ++ nameOfDecl e ++ " : " ++ tyToStr t ++ " = " ++ valToStr v
+                            repl "" n tenv' env'
               `catch`
               (\((EvalErr msg) :: EvalErr) -> do
                   outputStrLn msg
