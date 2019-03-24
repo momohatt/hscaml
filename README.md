@@ -35,4 +35,12 @@ pattern match
 # match (1, 2) with
   | (x, y) -> x + y;;
 - : int = 3
+# let hd l = match l with
+  | [] -> 0
+  | x :: y -> x;;
+val hd : int list -> int = <fun>
+# hd [1;2;3];;
+- : int = 1
+# hd [];;
+- : int = 0
 ```

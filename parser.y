@@ -23,39 +23,43 @@ import Lexer
 %right "::"
 %left '+' '-'
 %left '*' '/'
+%left '|'
 
 %token
-      let             { Token _ TokenLet }
-      rec             { Token _ TokenRec }
-      in              { Token _ TokenIn }
-      if              { Token _ TokenIf }
-      then            { Token _ TokenThen }
-      else            { Token _ TokenElse }
-      fun             { Token _ TokenFun }
-      "->"            { Token _ TokenArrow }
-      true            { Token _ TokenTrue }
-      false           { Token _ TokenFalse }
-      int             { Token _ (TokenInt $$) }
-      var             { Token _ (TokenVar $$) }
-      ";;"            { Token _ TokenSemiSemi }
-      '='             { Token _ TokenEq }
-      '<'             { Token _ TokenLT }
-      '>'             { Token _ TokenGT }
-      "<="            { Token _ TokenLE }
-      ">="            { Token _ TokenGE }
-      "&&"            { Token _ TokenAndAnd }
-      "||"            { Token _ TokenOrOr }
-      '+'             { Token _ TokenPlus }
-      '-'             { Token _ TokenMinus }
-      '*'             { Token _ TokenTimes }
-      '/'             { Token _ TokenDiv }
-      '('             { Token _ TokenLParen }
-      ')'             { Token _ TokenRParen }
-      '['             { Token _ TokenLBracket }
-      ']'             { Token _ TokenRBracket }
-      "::"            { Token _ TokenColonColon }
-      ';'             { Token _ TokenSemi }
-      ','             { Token _ TokenComma }
+      let      { Token _ TokenLet }
+      rec      { Token _ TokenRec }
+      in       { Token _ TokenIn }
+      if       { Token _ TokenIf }
+      then     { Token _ TokenThen }
+      else     { Token _ TokenElse }
+      fun      { Token _ TokenFun }
+      "->"     { Token _ TokenArrow }
+      match    { Token _ TokenMatch }
+      with     { Token _ TokenWith }
+      true     { Token _ TokenTrue }
+      false    { Token _ TokenFalse }
+      int      { Token _ (TokenInt $$) }
+      var      { Token _ (TokenVar $$) }
+      ";;"     { Token _ TokenSemiSemi }
+      '='      { Token _ TokenEq }
+      '<'      { Token _ TokenLT }
+      '>'      { Token _ TokenGT }
+      "<="     { Token _ TokenLE }
+      ">="     { Token _ TokenGE }
+      "&&"     { Token _ TokenAndAnd }
+      "||"     { Token _ TokenOrOr }
+      '+'      { Token _ TokenPlus }
+      '-'      { Token _ TokenMinus }
+      '*'      { Token _ TokenTimes }
+      '/'      { Token _ TokenDiv }
+      '('      { Token _ TokenLParen }
+      ')'      { Token _ TokenRParen }
+      '['      { Token _ TokenLBracket }
+      ']'      { Token _ TokenRBracket }
+      "::"     { Token _ TokenColonColon }
+      ';'      { Token _ TokenSemi }
+      ','      { Token _ TokenComma }
+      '|'      { Token _ TokenBar }
 
 %%
 
@@ -77,6 +81,8 @@ Expr :
     Decl in Expr                { ELetIn $1 $3 }
   | if Expr then Expr else Expr { EIf $2 $4 $6 }
   | fun Args "->" Expr          { $2 $4 }
+  | match Expr with Cases       { EMatch $2 $4 }
+  | match Expr with '|' Cases   { EMatch $2 $5 }
   | Expr "::" Expr              { ECons $1 $3 }
   | Expr '+'  Expr              { EBinop BAdd $1 $3 }
   | Expr '-'  Expr              { EBinop BSub $1 $3 }
@@ -90,6 +96,26 @@ Expr :
   | Expr "&&" Expr              { EBinop BAnd $1 $3 }
   | Expr "||" Expr              { EBinop BOr  $1 $3 }
   | AppExpr                     { $1 }
+
+Cases :
+    Pattern "->" Expr           { [($1, $3)] }
+  | Pattern "->" Expr '|' Cases { ($1, $3) : $5 }
+
+Pattern :
+    PatternAtom "::" Pattern { PCons $1 $3 }
+  | PatternAtom              { $1 }
+
+PatternAtom :
+    int                  { PInt $1 }
+  | var                  { PVar $1 }
+  | true                 { PBool True }
+  | false                { PBool False }
+  | '[' ']'              { PNil }
+  | '(' PatternTuple ')' { PTuple $2 }
+
+PatternTuple :
+    Pattern ',' Pattern      { [$1, $3] }
+  | Pattern ',' PatternTuple { $1 : $3 }
 
 AppExpr :
     AppExpr Atom { EApp $1 $2 }

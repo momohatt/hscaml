@@ -30,6 +30,8 @@ tokens :-
   else                           { lex' TokenElse        }
   fun                            { lex' TokenFun         }
   \-\>                           { lex' TokenArrow       }
+  match                          { lex' TokenMatch       }
+  with                           { lex' TokenWith        }
   true                           { lex' TokenTrue        }
   false                          { lex' TokenFalse       }
   $digit+                        { lex (TokenInt . read) }
@@ -52,6 +54,7 @@ tokens :-
   \,                             { lex' TokenComma       }
   \;                             { lex' TokenSemi        }
   \:\:                           { lex' TokenColonColon  }
+  \|                             { lex' TokenBar         }
   \;\;                           { lex' TokenSemiSemi    }
 
 {
@@ -81,6 +84,8 @@ data TokenClass
   | TokenElse
   | TokenFun
   | TokenArrow
+  | TokenMatch
+  | TokenWith
   | TokenTrue
   | TokenFalse
   | TokenInt Integer
@@ -103,6 +108,7 @@ data TokenClass
   | TokenComma
   | TokenSemi
   | TokenColonColon
+  | TokenBar
   | TokenSemiSemi
   | TokenEOF
   deriving ( Show )
@@ -117,6 +123,8 @@ unLex TokenThen = "then"
 unLex TokenElse = "else"
 unLex TokenFun = "fun"
 unLex TokenArrow = "->"
+unLex TokenMatch = "match"
+unLex TokenWith = "with"
 unLex TokenTrue = "true"
 unLex TokenFalse = "false"
 unLex (TokenInt i) = show i
@@ -140,6 +148,7 @@ unLex TokenComma = ","
 unLex TokenEOF = "<EOF>"
 unLex TokenSemi = ";"
 unLex TokenColonColon = "::"
+unLex TokenBar = "|"
 unLex TokenSemiSemi = ";;"
 
 alexEOF :: Alex Token
