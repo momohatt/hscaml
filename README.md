@@ -44,3 +44,6 @@ val hd : int list -> int = <fun>
 # hd [];;
 - : int = 0
 ```
+
+## References
+* [happy-plus-alex](https://github.com/dagit/happy-plus-alex) for lexer & parser example
