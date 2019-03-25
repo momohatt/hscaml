@@ -3,9 +3,13 @@ SOURCES=syntax.hs lexer.hs parser.hs type.hs typing.hs eval.hs main.hs
 PROGNAME=main
 
 all:	$(SOURCES)
-	alex lexer.x
-	happy parser.y
 	$(GHC) -o $(PROGNAME) $(SOURCES)
 
+lexer.hs: lexer.x
+	alex lexer.x
+
+parser.hs: parser.y
+	happy parser.y
+
 clean:
-	rm -rf $(PROGNAME) *.hi *.o
+	rm -rf $(PROGNAME) *.hi *.o lexer.hs parser.hs

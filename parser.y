@@ -50,7 +50,7 @@ import Lexer
       "||"     { Token _ TokenOrOr }
       '+'      { Token _ TokenPlus }
       '-'      { Token _ TokenMinus }
-      '*'      { Token _ TokenTimes }
+      '*'      { Token _ TokenAsterisk }
       '/'      { Token _ TokenDiv }
       '('      { Token _ TokenLParen }
       ')'      { Token _ TokenRParen }

@@ -45,7 +45,7 @@ tokens :-
   \|\|                           { lex' TokenOrOr        }
   \+                             { lex' TokenPlus        }
   \-                             { lex' TokenMinus       }
-  \*                             { lex' TokenTimes       }
+  \*                             { lex' TokenAsterisk    }
   \/                             { lex' TokenDiv         }
   \(                             { lex' TokenLParen      }
   \)                             { lex' TokenRParen      }
@@ -99,7 +99,7 @@ data TokenClass
   | TokenOrOr
   | TokenPlus
   | TokenMinus
-  | TokenTimes
+  | TokenAsterisk
   | TokenDiv
   | TokenLParen
   | TokenRParen
@@ -138,7 +138,7 @@ unLex TokenAndAnd = "&&"
 unLex TokenOrOr = "||"
 unLex TokenPlus = "+"
 unLex TokenMinus = "-"
-unLex TokenTimes = "*"
+unLex TokenAsterisk = "*"
 unLex TokenDiv = "/"
 unLex TokenLParen = "("
 unLex TokenRParen = ")"
