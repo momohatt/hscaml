@@ -1,10 +1,10 @@
 module Type
-    ( Ty(..)
-    , Constraint
-    , TyEnv
-    , Subst
-    , TySchema
-    ) where
+  ( Ty(..)
+  , Constraint
+  , TyEnv
+  , Subst
+  , TySchema
+  ) where
 
 data Ty = TInt
         | TBool

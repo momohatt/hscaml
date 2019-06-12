@@ -1,13 +1,13 @@
 module Syntax
-    ( Command(..)
-    , Decl(..)
-    , Expr(..)
-    , Pattern(..)
-    , Binop(..)
-    , Value(..)
-    , Env
-    , nameOfDecl
-    ) where
+  ( Command(..)
+  , Decl(..)
+  , Expr(..)
+  , Pattern(..)
+  , Binop(..)
+  , Value(..)
+  , Env
+  , nameOfDecl
+  ) where
 
 data Command = CExpr Expr
              | CDecl Decl
@@ -78,6 +78,6 @@ instance Show Value where
 
 nameOfDecl :: Decl -> String
 nameOfDecl d =
-    case d of
-      DLet x _ -> x
-      DLetRec x _ -> x
+  case d of
+    DLet x _ -> x
+    DLetRec x _ -> x
