@@ -4,7 +4,6 @@ module Type
     , TyEnv
     , Subst
     , TySchema
-    , tyToStr
     ) where
 
 data Ty = TInt
@@ -13,19 +12,17 @@ data Ty = TInt
         | TTuple [Ty]
         | TList Ty
         | TVar String
-        deriving (Show)
 
 type Constraint = [(Ty, Ty)]
 type TyEnv = [(String, TySchema)]
 type Subst = [(String, Ty)]
 type TySchema = ([String], Ty)
 
-tyToStr :: Ty -> String
-tyToStr t =
-    case t of
-      TInt -> "int"
-      TBool -> "bool"
-      TFun ts t -> tyToStr ts ++ " -> " ++ tyToStr t
-      TTuple ts -> "(" ++ tyToStr (head ts) ++ concatMap (\t -> " * " ++ tyToStr t) (tail ts) ++ ")"
-      TList t -> tyToStr t ++ " list"
-      TVar a -> a
+instance Show Ty where
+  show t = case t of
+    TInt -> "int"
+    TBool -> "bool"
+    TFun ts t -> show ts ++ " -> " ++ show t
+    TTuple ts -> "(" ++ show (head ts) ++ concatMap (\t -> " * " ++ show t) (tail ts) ++ ")"
+    TList t -> show t ++ " list"
+    TVar a -> a

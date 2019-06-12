@@ -54,11 +54,11 @@ repl input' n tenv env = do
                       -- outputStrLn $ show t
                       case parsedProg of
                         CExpr e -> do
-                            outputStrLn $ "- : " ++ tyToStr t ++ " = " ++ valToStr (eval env e)
+                            outputStrLn $ "- : " ++ show t ++ " = " ++ show (eval env e)
                             repl "" n tenv' env
                         CDecl e -> do
                             let (env', v) = evalDecl env e
-                            outputStrLn $ "val " ++ nameOfDecl e ++ " : " ++ tyToStr t ++ " = " ++ valToStr v
+                            outputStrLn $ "val " ++ nameOfDecl e ++ " : " ++ show t ++ " = " ++ show v
                             repl "" n tenv' env'
               `catch`
               (\((EvalErr msg) :: EvalErr) -> do

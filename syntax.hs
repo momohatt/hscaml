@@ -6,7 +6,6 @@ module Syntax
     , Binop(..)
     , Value(..)
     , Env
-    , valToStr
     , nameOfDecl
     ) where
 
@@ -61,23 +60,21 @@ data Value = VInt Integer
            | VTuple [Value]
            | VNil
            | VCons Value Value
-           deriving (Show)
 
 type Env = [(String, Value)]
 
-valToStr :: Value -> String
-valToStr v =
-    case v of
-      VInt n -> show n
-      VBool True -> "true"
-      VBool False -> "false"
-      VFun {} -> "<fun>"
-      VTuple vs -> "(" ++ valToStr (head vs) ++ concatMap (\v -> ", " ++ valToStr v) (tail vs) ++ ")"
-      VNil -> "[]"
-      VCons v1 v2 -> "[" ++ valToStr v1 ++ listToStr' v2
-        where listToStr' v = case v of
-                               VNil -> "]"
-                               VCons v1 v2 -> "; " ++ valToStr v1 ++ listToStr' v2
+instance Show Value where
+  show v = case v of
+    VInt n -> show n
+    VBool True -> "true"
+    VBool False -> "false"
+    VFun {} -> "<fun>"
+    VTuple vs -> "(" ++ show (head vs) ++ concatMap (\v -> ", " ++ show v) (tail vs) ++ ")"
+    VNil -> "[]"
+    VCons v1 v2 -> "[" ++ show v1 ++ listToStr' v2
+      where listToStr' v = case v of
+                             VNil -> "]"
+                             VCons v1 v2 -> "; " ++ show v1 ++ listToStr' v2
 
 nameOfDecl :: Decl -> String
 nameOfDecl d =
