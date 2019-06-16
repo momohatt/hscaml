@@ -2,8 +2,11 @@
 
 module Main where
 
-import Data.Char (isSpace)
+import Data.Char
+         (isSpace)
 import System.Console.Haskeline
+import System.Console.Haskeline.History
+         (addHistoryUnlessConsecutiveDupe)
 import System.IO
 
 import Syntax
@@ -37,7 +40,9 @@ repl input' n tenv env = do
     Just input ->
       if not $ isInputFinished input
         then repl (input' ++ input ++ " ") n tenv env
-        else
+        else do
+          history <- getHistory
+          putHistory $ addHistoryUnlessConsecutiveDupe (input' ++ input) history
           case parseExpr (input' ++ input) of
             Left msg -> do
               outputStrLn ("Parse error: " ++ msg)
@@ -67,6 +72,13 @@ repl input' n tenv env = do
     where
       prompt = if null input' then "# " else "  "
 
+haskelineSettings :: Settings IO
+haskelineSettings = Settings {
+  complete = completeFilename,
+  historyFile = Nothing,
+  autoAddHistory = False
+}
+
 main :: IO ()
 main =
-  runInputT defaultSettings $ repl "" 0 initTenv initEnv
+  runInputT haskelineSettings $ repl "" 0 initTenv initEnv
