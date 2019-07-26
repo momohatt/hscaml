@@ -146,7 +146,7 @@ lexwrap = (alexMonadScan' >>=)
 
 happyError :: Token -> Alex a
 happyError (Token p t) =
-  alexError' p ("parse error at token '" ++ unLex t ++ "'")
+  alexError' p ("parse error at token '" ++ show t ++ "'")
 
 parseExpr :: String -> Either String Command
 parseExpr = runAlex' parse

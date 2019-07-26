@@ -4,7 +4,6 @@ module Lexer
   ( Token(..)
   , AlexPosn(..)
   , TokenClass(..)
-  , unLex
   , Alex(..)
   , runAlex'
   , alexMonadScan'
@@ -111,45 +110,44 @@ data TokenClass
   | TokenBar
   | TokenSemiSemi
   | TokenEOF
-  deriving ( Show )
 
 -- For nice parser error messages.
-unLex :: TokenClass -> String
-unLex TokenLet = "let"
-unLex TokenRec = "rec"
-unLex TokenIn = "in"
-unLex TokenIf = "if"
-unLex TokenThen = "then"
-unLex TokenElse = "else"
-unLex TokenFun = "fun"
-unLex TokenArrow = "->"
-unLex TokenMatch = "match"
-unLex TokenWith = "with"
-unLex TokenTrue = "true"
-unLex TokenFalse = "false"
-unLex (TokenInt i) = show i
-unLex (TokenVar s) = show s
-unLex TokenEq = "="
-unLex TokenLT = "<"
-unLex TokenGT = ">"
-unLex TokenLE = "<="
-unLex TokenGE = ">="
-unLex TokenAndAnd = "&&"
-unLex TokenOrOr = "||"
-unLex TokenPlus = "+"
-unLex TokenMinus = "-"
-unLex TokenAsterisk = "*"
-unLex TokenDiv = "/"
-unLex TokenLParen = "("
-unLex TokenRParen = ")"
-unLex TokenLBracket = "["
-unLex TokenRBracket = "]"
-unLex TokenComma = ","
-unLex TokenEOF = "<EOF>"
-unLex TokenSemi = ";"
-unLex TokenColonColon = "::"
-unLex TokenBar = "|"
-unLex TokenSemiSemi = ";;"
+instance Show TokenClass where
+  show TokenLet = "let"
+  show TokenRec = "rec"
+  show TokenIn = "in"
+  show TokenIf = "if"
+  show TokenThen = "then"
+  show TokenElse = "else"
+  show TokenFun = "fun"
+  show TokenArrow = "->"
+  show TokenMatch = "match"
+  show TokenWith = "with"
+  show TokenTrue = "true"
+  show TokenFalse = "false"
+  show (TokenInt i) = show i
+  show (TokenVar s) = show s
+  show TokenEq = "="
+  show TokenLT = "<"
+  show TokenGT = ">"
+  show TokenLE = "<="
+  show TokenGE = ">="
+  show TokenAndAnd = "&&"
+  show TokenOrOr = "||"
+  show TokenPlus = "+"
+  show TokenMinus = "-"
+  show TokenAsterisk = "*"
+  show TokenDiv = "/"
+  show TokenLParen = "("
+  show TokenRParen = ")"
+  show TokenLBracket = "["
+  show TokenRBracket = "]"
+  show TokenComma = ","
+  show TokenEOF = "<EOF>"
+  show TokenSemi = ";"
+  show TokenColonColon = "::"
+  show TokenBar = "|"
+  show TokenSemiSemi = ";;"
 
 alexEOF :: Alex Token
 alexEOF = do
