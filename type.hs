@@ -19,10 +19,9 @@ type Subst = [(String, Ty)]
 type TySchema = ([String], Ty)
 
 instance Show Ty where
-  show t = case t of
-    TInt -> "int"
-    TBool -> "bool"
-    TFun ts t -> show ts ++ " -> " ++ show t
-    TTuple ts -> "(" ++ show (head ts) ++ concatMap (\t -> " * " ++ show t) (tail ts) ++ ")"
-    TList t -> show t ++ " list"
-    TVar a -> a
+  show TInt = "int"
+  show TBool = "bool"
+  show (TFun ts t) = show ts ++ " -> " ++ show t
+  show (TTuple ts) = "(" ++ show (head ts) ++ concatMap (\t -> " * " ++ show t) (tail ts) ++ ")"
+  show (TList t) = show t ++ " list"
+  show (TVar a) = a

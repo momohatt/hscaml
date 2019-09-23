@@ -64,14 +64,13 @@ data Value = VInt Integer
 type Env = [(String, Value)]
 
 instance Show Value where
-  show v = case v of
-    VInt n -> show n
-    VBool True -> "true"
-    VBool False -> "false"
-    VFun {} -> "<fun>"
-    VTuple vs -> "(" ++ show (head vs) ++ concatMap (\v -> ", " ++ show v) (tail vs) ++ ")"
-    VNil -> "[]"
-    VCons v1 v2 -> "[" ++ show v1 ++ listToStr' v2
+  show (VInt n) = show n
+  show (VBool True) = "true"
+  show (VBool False) = "false"
+  show (VFun {}) = "<fun>"
+  show (VTuple vs) = "(" ++ show (head vs) ++ concatMap (\v -> ", " ++ show v) (tail vs) ++ ")"
+  show  VNil = "[]"
+  show (VCons v1 v2) = "[" ++ show v1 ++ listToStr' v2
       where listToStr' v = case v of
                              VNil -> "]"
                              VCons v1 v2 -> "; " ++ show v1 ++ listToStr' v2
