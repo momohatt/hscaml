@@ -3,3 +3,4 @@
 main
 lexer.hs
 parser.hs
+parser.output

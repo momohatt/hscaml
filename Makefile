@@ -9,7 +9,7 @@ lexer.hs: lexer.x
 	alex lexer.x
 
 parser.hs: parser.y
-	happy parser.y
+	happy -iparser.output parser.y
 
 clean:
 	rm -rf $(PROGNAME) *.hi *.o lexer.hs parser.hs
