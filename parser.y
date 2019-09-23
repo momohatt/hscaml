@@ -106,24 +106,16 @@ Pattern :
   | PatternAtom              { $1 }
 
 PatternAtom :
-    int                  { PInt $1 }
-  | var                  { PVar $1 }
-  | true                 { PBool True }
-  | false                { PBool False }
-  | '[' ']'              { PNil }
-  | '(' PatternTuple ')' { PTuple $2 }
-
-PatternTuple :
-    Pattern ',' Pattern      { [$1, $3] }
-  | Pattern ',' PatternTuple { $1 : $3 }
+    int                        { PInt $1 }
+  | var                        { PVar $1 }
+  | true                       { PBool True }
+  | false                      { PBool False }
+  | '[' ']'                    { PNil }
+  | '(' sep2(Pattern, ',') ')' { PTuple $2 }
 
 AppExpr :
     AppExpr Atom { EApp $1 $2 }
   | Atom         { $1 }
-
-Tuple1 :
-    Expr ',' Expr   { [$1, $3] }
-  | Expr ',' Tuple1 { $1 : $3 }
 
 List1 :
     Expr ';' List1 { ECons $1 $3 }
@@ -131,14 +123,32 @@ List1 :
   | Expr ';'       { ECons $1 ENil }
 
 Atom :
-    int            { EConstInt $1 }
-  | var            { EVar $1 }
-  | true           { EConstBool True }
-  | false          { EConstBool False }
-  | '(' Tuple1 ')' { ETuple $2 }
-  | '(' Expr ')'   { $2 }
-  | '[' ']'        { ENil }
-  | '[' List1 ']'  { $2 }
+    int                     { EConstInt $1 }
+  | var                     { EVar $1 }
+  | true                    { EConstBool True }
+  | false                   { EConstBool False }
+  | '(' sep2(Expr, ',') ')' { ETuple $2 }
+  | '(' Expr ')'            { $2 }
+  | '[' ']'                 { ENil }
+  | '[' List1 ']'           { $2 }
+
+--
+-- Helpers (Parameterized Products)
+--
+
+sep2(p, q)    : p q sep1(p, q)     { $1 : $3 }
+sep1(p, q)    : p list(snd(q, p))  { $1 : $2 }
+sep(p, q)     : sep1(p, q)         { $1 }
+              |                    { [] }
+
+snd(p, q)     : p q                { $2 }
+
+list1(p)      : rev_list1(p)       { reverse $1 }
+list(p)       : list1(p)           { $1 }
+              |                    { [] }
+
+rev_list1(p)  : p                  { [$1] }
+              | rev_list1(p) p     { $2 : $1 }
 
 {
 lexwrap :: (Token -> Alex a) -> Alex a
