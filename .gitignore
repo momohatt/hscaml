@@ -1,9 +1,3 @@
 .stack-work/
 hscaml.cabal
 *~
-*.hi
-*.o
-main
-Lexer.hs
-Parser.hs
-Parser.output
