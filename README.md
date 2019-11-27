@@ -4,8 +4,9 @@ toy OCaml interpreter in Haskell
 
 ## Build & Run
 ```
-$ make
-$ ./main
+$ stack init
+$ stack build
+$ stack run hscaml
 ```
 
 ## Example
