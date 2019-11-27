@@ -6,12 +6,13 @@ module Type
   , TySchema
   ) where
 
-data Ty = TInt
-        | TBool
-        | TFun Ty Ty
-        | TTuple [Ty]
-        | TList Ty
-        | TVar String
+data Ty
+  = TInt
+  | TBool
+  | TFun Ty Ty
+  | TTuple [Ty]
+  | TList Ty
+  | TVar String
 
 type Constraint = [(Ty, Ty)]
 type TyEnv = [(String, TySchema)]
