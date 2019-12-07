@@ -42,7 +42,7 @@ repl input' n tenv env = do
         else do
           history <- getHistory
           putHistory $ addHistoryUnlessConsecutiveDupe (input' ++ input) history
-          case parseExpr (input' ++ input) of
+          case parseCmd (input' ++ input) of
             Left msg -> do
               outputStrLn ("Parse error: " ++ msg)
               repl "" n tenv env

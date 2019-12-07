@@ -21,6 +21,7 @@ description:         Please see the README on GitHub at <https://github.com/momo
 dependencies:
 - base >= 4.7 && < 5
 - array
+- megaparsec
 - mtl
 - haskeline
 
@@ -38,9 +39,6 @@ executables:
     - -Wall
     dependencies:
     - hscaml
-    build-tools:
-    - happy
-    - alex
 
 tests:
   hscaml-test:
