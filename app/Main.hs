@@ -36,15 +36,15 @@ repl input' n tenv env = do
     Nothing -> return ()
     Just "quit" -> return ()
     Just "exit" -> return ()
-    Just input ->
+    Just input -> do
+      history <- getHistory
+      putHistory $ addHistoryUnlessConsecutiveDupe input history
       if not $ isInputFinished input
         then repl (input' ++ input ++ " ") n tenv env
-        else do
-          history <- getHistory
-          putHistory $ addHistoryUnlessConsecutiveDupe (input' ++ input) history
+        else
           case parseCmd (input' ++ input) of
             Left msg -> do
-              outputStrLn ("Parse error: " ++ msg)
+              outputStr ("Parse error at: " ++ msg)
               repl "" n tenv env
             Right parsedProg ->
               case typeCheck n tenv parsedProg of
