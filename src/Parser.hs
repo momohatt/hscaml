@@ -59,7 +59,7 @@ matchClause1 = do
   return (first : rest)
   where
     matchClause :: Parser (Pattern, Expr)
-    matchClause = (,) <$> pattern <*> expr
+    matchClause = (,) <$> pattern <*> (symbol "->" >> expr)
 
 opExpr :: Parser Expr
 opExpr = makeExprParser atomExpr table
@@ -105,7 +105,39 @@ atomExpr = EConstInt  <$> positiveIntegerLiteral
        <?> "atomic expression"
 
 pattern :: Parser Pattern
-pattern = undefined
+pattern = opPattern
+      <?> "pattern"
+
+opPattern :: Parser Pattern
+opPattern = makeExprParser atomPattern table
+  where
+    table :: [[Operator Parser Pattern]]
+    table =
+      [ [ InfixR (PCons <$ symbol "::" ) ]
+      ]
+
+parenPattern :: Parser Pattern
+parenPattern = do
+  elems <- parens $ sepBy pattern comma
+  case elems of
+    [x] -> return x
+    _   -> return $ PTuple elems
+
+bracketPattern :: Parser Pattern
+bracketPattern = do
+  elems <- brackets $ sepBy pattern comma
+  case elems of
+    []  -> return PNil
+    _   -> return $ foldr PCons PNil elems
+
+atomPattern :: Parser Pattern
+atomPattern = PInt  <$> positiveIntegerLiteral
+          <|> PInt . negate <$> (symbol "-" >> positiveIntegerLiteral)
+          <|> PBool <$> boolLiteral
+          <|> PVar  <$> lowerId
+          <|> parenPattern
+          <|> bracketPattern
+          <?> "atomic pattern"
 
 --
 -- Tokens
@@ -116,7 +148,7 @@ sc :: Parser ()
 sc = L.space space1 lineCmnt blockCmnt
   where
     lineCmnt  = L.skipLineComment "--"
-    blockCmnt = L.skipBlockCommentNested "{-" "-}"
+    blockCmnt = L.skipBlockCommentNested "(*" "*)"
 
 lexeme :: Parser a -> Parser a
 lexeme = L.lexeme sc
