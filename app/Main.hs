@@ -8,15 +8,9 @@ import System.Console.Haskeline.History (addHistoryUnlessConsecutiveDupe)
 
 import Syntax
 import Parser
+import IState
 import Eval
-import Type
 import Typing
-
-initEnv :: Env
-initEnv = []
-
-initTenv :: TyEnv
-initTenv = []
 
 isInputFinished :: String -> Bool
 isInputFinished = isInputFinished' . reverse
@@ -29,8 +23,8 @@ isInputFinished = isInputFinished' . reverse
           | otherwise -> False
         _             -> False
 
-repl :: String -> Int -> TyEnv -> Env -> InputT IO ()
-repl input' n tenv env = do
+repl :: String -> IState -> InputT IO ()
+repl input' st = do
   minput <- getInputLine prompt
   case minput of
     Nothing -> return ()
@@ -40,30 +34,30 @@ repl input' n tenv env = do
       history <- getHistory
       putHistory $ addHistoryUnlessConsecutiveDupe input history
       if not $ isInputFinished input
-        then repl (input' ++ input ++ " ") n tenv env
+        then repl (input' ++ input ++ " ") st
         else
           case parseCmd (input' ++ input) of
             Left msg -> do
               outputStr ("Parse error at: " ++ msg)
-              repl "" n tenv env
+              repl "" st
             Right parsedProg ->
-              case typeCheck n tenv parsedProg of
+              case typeCheck st parsedProg of
                 Left msg -> do
                   outputStrLn ("Type error: " ++ msg)
-                  repl "" n tenv env
-                Right (t, tenv', _, n') -> do
+                  repl "" st
+                Right (t, _, st') -> do
                   case parsedProg of
                     CExpr e -> do
-                      outputStrLn $ "- : " ++ show t ++ " = " ++ show (eval env e)
-                      repl "" n' tenv' env
+                      outputStrLn $ "- : " ++ show t ++ " = " ++ show (eval (env st') e)
+                      repl "" st'
                     CDecl e -> do
-                      let (env', v) = evalDecl env e
+                      let (env', v) = evalDecl (env st') e
                       outputStrLn $ "val " ++ nameOfDecl e ++ " : " ++ show t ++ " = " ++ show v
-                      repl "" n' tenv' env'
+                      repl "" (st' { env = env' })
           `catch`
           (\((EvalErr msg) :: EvalErr) -> do
             outputStrLn msg
-            repl "" n tenv env)
+            repl "" st)
     where
       prompt = if null input' then "# " else "  "
 
@@ -76,4 +70,4 @@ haskelineSettings =
 
 main :: IO ()
 main =
-  runInputT haskelineSettings $ repl "" 0 initTenv initEnv
+  runInputT haskelineSettings $ repl "" initIState

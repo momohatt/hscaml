@@ -9,6 +9,7 @@ import Data.Maybe
 import Data.Either
 
 import Syntax
+import IState
 import Type
 
 tySchemaSubst :: Subst -> TySchema -> TySchema
@@ -284,17 +285,17 @@ tyUnify c =
               where newc = replaceFvInCons a (TList t1) xc
         _ -> Left $ "cannot unify " ++ show (fst ts) ++ " and " ++ show (snd ts)
 
-typeCheck :: Int -> TyEnv -> Command -> Either String (Ty, TyEnv, Subst, Int)
-typeCheck n tenv c =
+typeCheck :: IState -> Command -> Either String (Ty, Subst, IState)
+typeCheck st c =
   case c of
     CExpr e -> do
-      let (r, n') = runState (genConst tenv e) n
+      let (r, n') = runState (genConst (tyenv st) e) (freshId st)
       (ts, const) <- r
       s <- tyUnify const
-      return (tySubst s ts, tenv, s, n')
+      return (tySubst s ts, s, st { freshId = n' })
     CDecl d -> do
-      let (r, n') = runState (genConstDecl tenv d) n
+      let (r, n') = runState (genConstDecl (tyenv st) d) (freshId st)
       (ts, const, _) <- r
       sigma <- tyUnify const
       let ts' = tySchemaSubst sigma ts
-      return (snd ts', (nameOfDecl d, ts') : tenv, sigma, n')
+      return (snd ts', sigma, st { freshId = n', tyenv = (nameOfDecl d, ts') : (tyenv st) })
