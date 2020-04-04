@@ -48,12 +48,12 @@ repl input' st = do
                 Right (t, _, st') -> do
                   case parsedProg of
                     CExpr e -> do
-                      outputStrLn $ "- : " ++ show t ++ " = " ++ show (eval (env st') e)
+                      outputStrLn $ "- : " ++ show t ++ " = " ++ show (eval st' e)
                       repl "" st'
                     CDecl e -> do
-                      let (env', v) = evalDecl (env st') e
+                      let (v, st'') = evalDecl st' e
                       outputStrLn $ "val " ++ nameOfDecl e ++ " : " ++ show t ++ " = " ++ show v
-                      repl "" (st' { env = env' })
+                      repl "" st''
           `catch`
           (\((EvalErr msg) :: EvalErr) -> do
             outputStrLn msg
