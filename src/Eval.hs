@@ -13,17 +13,15 @@ data EvalErr = EvalErr String deriving (Show)
 instance Exception EvalErr
 
 findMatch :: Pattern -> Value -> Maybe Env
-findMatch p v = case (p, v) of
-  (PInt a, VInt b)       -> if a == b then return [] else Nothing
-  (PBool a, VBool b)     -> if a == b then return [] else Nothing
-  (PVar a, _)            -> return [(a, v)]
-  (PTuple ps, VTuple vs) ->
-    if length ps /= length vs then Nothing
-                              else concat <$> zipWithM findMatch ps vs
-  (PNil, VNil)           -> return []
-  (PCons h t, VCons h' t') ->
-    (++) <$> findMatch h h' <*> findMatch t t'
-  _ -> Nothing
+findMatch (PInt a)  (VInt b)  | a == b = return []
+findMatch (PBool a) (VBool b) | a == b = return []
+findMatch (PVar a)  v                  = return [(a, v)]
+findMatch (PTuple ps) (VTuple vs) | length ps == length vs =
+  concat <$> zipWithM findMatch ps vs
+findMatch PNil VNil = return []
+findMatch (PCons h t) (VCons h' t') =
+  (++) <$> findMatch h h' <*> findMatch t t'
+findMatch _ _ = Nothing
 
 eval :: Env -> Expr -> Value
 eval env e =
@@ -94,14 +92,10 @@ evalBinOp op =
                                         (VBool a, VBool b) -> VBool $ a <= b
 
 evalDecl :: Env -> Decl -> (Env, Value)
-evalDecl env e =
-  case e of
-    DLet x e ->
-      ((x, val) : env, val)
-        where val = eval env e
-    DLetRec f e ->
-      case e of
-        EFun x e' ->
-          let env' = (f, VFun x e' env') : env
-              val = VFun x e' env'
-           in ((f, val) : env, val)
+evalDecl env (DLet x e) =
+  let val = eval env e
+   in ((x, val) : env, val)
+evalDecl env (DLetRec f (EFun x e')) =
+  let env' = (f, VFun x e' env') : env
+      val = VFun x e' env'
+   in ((f, val) : env, val)

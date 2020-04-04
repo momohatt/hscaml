@@ -253,49 +253,42 @@ tyUnify c =
         (TVar a, TBool) ->
           (`compose` [(a, TBool)]) <$> tyUnify newc
               where newc = replaceFvInCons a TBool xc
+
+        (t1@(TVar a), t2) | checkFv a t2 ->
+          Left $ "cannot unify " ++ show t1 ++ " and " ++ show t2
+        (t1, t2@(TVar a)) | checkFv a t1 ->
+          Left $ "cannot unify " ++ show t1 ++ " and " ++ show t2
+
         (TFun t1 t2, TVar a) ->
-          case checkFv a (TFun t1 t2) of
-            True -> Left $ "cannot unify " ++ show (fst ts) ++ " and " ++ show (snd ts)
-            False -> (`compose` [(a, TFun t1 t2)]) <$> tyUnify newc
-              where newc = replaceFvInCons a (TFun t1 t2) xc
+          (`compose` [(a, TFun t1 t2)]) <$> tyUnify newc
+            where newc = replaceFvInCons a (TFun t1 t2) xc
         (TVar a, TFun t1 t2) ->
-          case checkFv a (TFun t1 t2) of
-            True -> Left $ "cannot unify " ++ show (fst ts) ++ " and " ++ show (snd ts)
-            False -> (`compose` [(a, TFun t1 t2)]) <$> tyUnify newc
-              where newc = replaceFvInCons a (TFun t1 t2) xc
+          (`compose` [(a, TFun t1 t2)]) <$> tyUnify newc
+            where newc = replaceFvInCons a (TFun t1 t2) xc
         (TTuple t1, TVar a) ->
-          case checkFv a (TTuple t1) of
-            True -> Left $ "cannot unify " ++ show (fst ts) ++ " and " ++ show (snd ts)
-            False -> (`compose` [(a, TTuple t1)]) <$> tyUnify newc
-              where newc = replaceFvInCons a (TTuple t1) xc
+          (`compose` [(a, TTuple t1)]) <$> tyUnify newc
+            where newc = replaceFvInCons a (TTuple t1) xc
         (TVar a, TTuple t1) ->
-          case checkFv a (TTuple t1) of
-            True -> Left $ "cannot unify " ++ show (fst ts) ++ " and " ++ show (snd ts)
-            False -> (`compose` [(a, TTuple t1)]) <$> tyUnify newc
-              where newc = replaceFvInCons a (TTuple t1) xc
+          (`compose` [(a, TTuple t1)]) <$> tyUnify newc
+            where newc = replaceFvInCons a (TTuple t1) xc
         (TList t1, TVar a) ->
-          case checkFv a (TList t1) of
-            True -> Left $ "cannot unify " ++ show (fst ts) ++ " and " ++ show (snd ts)
-            False -> (`compose` [(a, TList t1)]) <$> tyUnify newc
-              where newc = replaceFvInCons a (TList t1) xc
+          (`compose` [(a, TList t1)]) <$> tyUnify newc
+            where newc = replaceFvInCons a (TList t1) xc
         (TVar a, TList t1) ->
-          case checkFv a (TList t1) of
-            True -> Left $ "cannot unify " ++ show (fst ts) ++ " and " ++ show (snd ts)
-            False -> (`compose` [(a, TList t1)]) <$> tyUnify newc
-              where newc = replaceFvInCons a (TList t1) xc
+          (`compose` [(a, TList t1)]) <$> tyUnify newc
+            where newc = replaceFvInCons a (TList t1) xc
+
         _ -> Left $ "cannot unify " ++ show (fst ts) ++ " and " ++ show (snd ts)
 
 typeCheck :: IState -> Command -> Either String (Ty, Subst, IState)
-typeCheck st c =
-  case c of
-    CExpr e -> do
-      let (r, n') = runState (genConst (tyenv st) e) (freshId st)
-      (ts, const) <- r
-      s <- tyUnify const
-      return (tySubst s ts, s, st { freshId = n' })
-    CDecl d -> do
-      let (r, n') = runState (genConstDecl (tyenv st) d) (freshId st)
-      (ts, const, _) <- r
-      sigma <- tyUnify const
-      let ts' = tySchemaSubst sigma ts
-      return (snd ts', sigma, st { freshId = n', tyenv = (nameOfDecl d, ts') : (tyenv st) })
+typeCheck st (CExpr e) = do
+  let (r, n') = runState (genConst (tyenv st) e) (freshId st)
+  (ts, const) <- r
+  s <- tyUnify const
+  return (tySubst s ts, s, st { freshId = n' })
+typeCheck st (CDecl d) = do
+  let (r, n') = runState (genConstDecl (tyenv st) d) (freshId st)
+  (ts, const, _) <- r
+  sigma <- tyUnify const
+  let ts' = tySchemaSubst sigma ts
+  return (snd ts', sigma, st { freshId = n', tyenv = (nameOfDecl d, ts') : (tyenv st) })
