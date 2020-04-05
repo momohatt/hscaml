@@ -3,6 +3,11 @@
 module Main where
 
 import Data.Char                        (isSpace)
+
+import Control.Monad.Trans.Class        (lift)
+import Control.Monad.Trans.Except       (except, ExceptT, runExceptT)
+import Control.Monad.Trans.State.Lazy
+
 import System.Console.Haskeline
 import System.Console.Haskeline.History (addHistoryUnlessConsecutiveDupe)
 
@@ -10,6 +15,7 @@ import Syntax
 import Parser
 import IState
 import Eval
+import Type
 import Typing
 
 isInputFinished :: String -> Bool
@@ -23,43 +29,48 @@ isInputFinished = isInputFinished' . reverse
           | otherwise -> False
         _             -> False
 
-repl :: String -> IState -> InputT IO ()
-repl input' st = do
+addHistory :: String -> InputT IO ()
+addHistory input = do
+  history <- getHistory
+  putHistory $ addHistoryUnlessConsecutiveDupe input history
+
+readInput :: String -> InputT IO (Maybe String)
+readInput input' = do
+  let prompt = if null input' then "# " else "  "
   minput <- getInputLine prompt
   case minput of
-    Nothing -> return ()
-    Just "quit" -> return ()
-    Just "exit" -> return ()
+    Nothing -> return Nothing
+    Just "quit" -> return Nothing
+    Just "exit" -> return Nothing
+    Just input | not (isInputFinished input) -> do
+      addHistory input
+      readInput (input' ++ input ++ " ")
     Just input -> do
-      history <- getHistory
-      putHistory $ addHistoryUnlessConsecutiveDupe input history
-      if not $ isInputFinished input
-        then repl (input' ++ input ++ " ") st
-        else
-          case parseCmd (input' ++ input) of
-            Left msg -> do
-              outputStr ("Parse error at: " ++ msg)
-              repl "" st
-            Right parsedProg ->
-              case typeCheck st parsedProg of
-                Left msg -> do
-                  outputStrLn ("Type error: " ++ msg)
-                  repl "" st
-                Right (t, _, st') -> do
-                  case parsedProg of
-                    CExpr e -> do
-                      outputStrLn $ "- : " ++ show t ++ " = " ++ show (eval st' e)
-                      repl "" st'
-                    CDecl e -> do
-                      let (v, st'') = evalDecl st' e
-                      outputStrLn $ "val " ++ nameOfDecl e ++ " : " ++ show t ++ " = " ++ show v
-                      repl "" st''
-          `catch`
-          (\((EvalErr msg) :: EvalErr) -> do
-            outputStrLn msg
-            repl "" st)
-    where
-      prompt = if null input' then "# " else "  "
+      addHistory input
+      return (Just (input' ++ input))
+
+repl :: IStateT (InputT IO) ()
+repl = do
+  minput <- lift $ readInput ""
+  case minput of
+    Nothing -> return ()
+    Just input -> do
+      ety <- runExceptT (processCmd input)
+      case ety of
+        Left msg -> lift $ outputStrLn msg
+        Right msg -> lift $ outputStrLn msg
+      repl
+  where
+    processCmd :: String -> ExceptT String (IStateT (InputT IO)) String
+    processCmd input = do
+      prog <- except (parseCmd input)
+      (ty, _) <- typeCheck prog
+      v <- evalCmd prog
+      case prog of
+        CExpr _ ->
+          return $ "- : " ++ show ty ++ " = " ++ show v
+        CDecl e ->
+          return $ "val " ++ nameOfDecl e ++ " : " ++ show ty ++ " = " ++ show v
 
 haskelineSettings :: Settings IO
 haskelineSettings =
@@ -70,4 +81,4 @@ haskelineSettings =
 
 main :: IO ()
 main =
-  runInputT haskelineSettings $ repl "" initIState
+  runInputT haskelineSettings . (`evalStateT` initIState) $ repl

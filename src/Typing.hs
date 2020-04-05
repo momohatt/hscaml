@@ -5,6 +5,7 @@ module Typing
   ) where
 
 import Control.Monad.State
+import Control.Monad.Trans.Except       (catchE, except, ExceptT, throwE)
 import Data.Maybe
 import Data.Either
 
@@ -280,15 +281,22 @@ tyUnify c =
 
         _ -> Left $ "cannot unify " ++ show (fst ts) ++ " and " ++ show (snd ts)
 
-typeCheck :: IState -> Command -> Either String (Ty, Subst, IState)
-typeCheck st (CExpr e) = do
-  let (r, n') = runState (genConst (tyenv st) e) (freshId st)
-  (ts, const) <- r
-  s <- tyUnify const
-  return (tySubst s ts, s, st { freshId = n' })
-typeCheck st (CDecl d) = do
-  let (r, n') = runState (genConstDecl (tyenv st) d) (freshId st)
-  (ts, const, _) <- r
-  sigma <- tyUnify const
-  let ts' = tySchemaSubst sigma ts
-  return (snd ts', sigma, st { freshId = n', tyenv = (nameOfDecl d, ts') : (tyenv st) })
+typeCheck :: Monad m => Command -> ExceptT String (IStateT m) (Ty, Subst)
+typeCheck cmd = do
+  st <- lift $ get
+  case cmd of
+    CExpr e -> do
+      let (r, n') = runState (genConst (tyenv st) e) (freshId st)
+      (ts, const) <- except r
+      s <- except $ tyUnify const
+      lift $ put $ st { freshId = n' }
+      return (tySubst s ts, s)
+    CDecl d -> do
+      let (r, n') = runState (genConstDecl (tyenv st) d) (freshId st)
+      (ts, const, _) <- except r
+      sigma <- except $ tyUnify const
+      let ts' = tySchemaSubst sigma ts
+      put $ st { freshId = n', tyenv = (nameOfDecl d, ts') : (tyenv st) }
+      return (snd ts', sigma)
+  `catchE`
+    \s -> throwE ("Type error: " ++ s)

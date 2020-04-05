@@ -18,7 +18,7 @@ type Parser = Parsec Void String
 parseCmd :: String -> Either String Command
 parseCmd input =
   case parse (sc >> command <* symbol ";;") "" input of
-    Left err -> Left (errorBundlePretty err)
+    Left err -> Left ("Parse error at: " ++ errorBundlePretty err)
     Right c  -> Right c
 
 command :: Parser Command

@@ -1,17 +1,13 @@
 module Eval
-  ( eval
-  , evalDecl
-  , EvalErr(..)
+  ( evalCmd
   ) where
 
-import Control.Exception
 import Control.Monad
+import Control.Monad.State
+import Control.Monad.Trans.Except
 
 import Syntax
 import IState
-
-data EvalErr = EvalErr String deriving (Show)
-instance Exception EvalErr
 
 findMatch :: Pattern -> Value -> Maybe Env
 findMatch (PInt a)  (VInt b)  | a == b = return []
@@ -24,52 +20,56 @@ findMatch (PCons h t) (VCons h' t') =
   (++) <$> findMatch h h' <*> findMatch t t'
 findMatch _ _ = Nothing
 
-eval :: IState -> Expr -> Value
+eval :: Monad m => IState -> Expr -> ExceptT String m Value
 eval st e =
   case e of
-    EConstInt n -> VInt n
-    EConstBool b -> VBool b
+    EConstInt n -> return (VInt n)
+    EConstBool b -> return (VBool b)
     EVar x ->
       case lookup x (env st) of
-        Just v -> v
-        Nothing -> throw $ EvalErr $ "Unknown variable " ++ x
+        Just v -> return v
+        Nothing -> throwE $ "Unknown variable " ++ x
     ETuple es ->
-      VTuple $ map (eval st) es
+      VTuple <$> mapM (eval st) es
     ENil ->
-      VNil
+      return VNil
     ECons e1 e2 ->
-      VCons (eval st e1) (eval st e2)
-    ENot e' ->
-      case eval st e' of
-        VBool b -> VBool $ not b
-    ENeg e' ->
-      case eval st e' of
-        VInt n -> VInt $ -1 * n
+      VCons <$> eval st e1 <*> eval st e2
+    ENot e' -> do
+      v <- eval st e'
+      case v of
+        VBool b -> return (VBool (not b))
+    ENeg e' -> do
+      v <- eval st e'
+      case v of
+        VInt n -> return (VInt (- n))
     EBinop op e1 e2 ->
-      evalBinOp op (eval st e1) (eval st e2)
-    EIf e1 e2 e3 ->
-      case eval st e1 of
-        VBool b -> if b then eval st e2 else eval st e3
+      evalBinOp op <$> eval st e1 <*> eval st e2
+    EIf e1 e2 e3 -> do
+      v <- eval st e1
+      case v of
+        VBool b -> eval st (if b then e2 else e3)
     EFun x e ->
-      VFun x e (env st)
-    ELetIn d1 e2 ->
-      let (_, st') = evalDecl st d1
-       in eval st' e2
-    EApp f e ->
-      let z = eval st e in
-      case eval st f of
+      return (VFun x e (env st))
+    ELetIn d1 e2 -> do
+      (_, st') <- evalDecl st d1
+      eval st' e2
+    EApp f e -> do
+      z <- eval st e
+      v <- eval st f
+      case v of
         VFun x body env' -> eval (st { env = (x, z) : env' }) body
-    EMatch e ps ->
-      let (env', expr) = helper ps in
+    EMatch e ps -> do
+      val <- eval st e
+      (env', expr) <- helper ps val
       eval (st { env = env' ++ env st }) expr
         where
-          val = eval st e
-          helper :: [(Pattern, Expr)] -> (Env, Expr)
-          helper ps = case ps of
-            [] -> throw $ EvalErr "Match Failure"
+          helper :: Monad m => [(Pattern, Expr)] -> Value -> ExceptT String m (Env, Expr)
+          helper ps val = case ps of
+            [] -> throwE "Match Failure"
             (p, exp) : px -> case findMatch p val of
-              Just env -> (env, exp)
-              Nothing -> helper px
+              Just env -> return (env, exp)
+              Nothing -> helper px val
 
 evalBinOp :: Binop -> Value -> Value -> Value
 evalBinOp op =
@@ -92,11 +92,21 @@ evalBinOp op =
     BLE  -> \ e1 e2 -> case (e1, e2) of (VInt a, VInt b)   -> VBool $ a <= b
                                         (VBool a, VBool b) -> VBool $ a <= b
 
-evalDecl :: IState -> Decl -> (Value, IState)
-evalDecl st (DLet x e) =
-  let val = eval st e
-   in (val, st { env = (x, val) : env st })
-evalDecl st (DLetRec f (EFun x e')) =
+evalDecl :: Monad m => IState -> Decl -> ExceptT String m (Value, IState)
+evalDecl st (DLet x e) = do
+  val <- eval st e
+  return (val, st { env = (x, val) : env st })
+evalDecl st (DLetRec f (EFun x e')) = do
   let env' = (f, VFun x e' env') : env st
-      val = VFun x e' env'
-   in (val, st { env = (f, val) : env st })
+  let val = VFun x e' env'
+  return (val, st { env = (f, val) : env st })
+
+evalCmd :: Monad m => Command -> ExceptT String (IStateT m) Value
+evalCmd (CExpr e) = do
+  st <- lift get
+  eval st e
+evalCmd (CDecl e) = do
+  st <- lift get
+  (val, st') <- evalDecl st e
+  lift (put st')
+  return val

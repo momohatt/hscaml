@@ -25,6 +25,7 @@ dependencies:
 - mtl
 - haskeline
 - parser-combinators
+- transformers
 
 library:
   source-dirs: src
