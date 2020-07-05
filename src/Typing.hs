@@ -205,7 +205,7 @@ tySubst s t =
 
 compose :: Subst -> Subst -> Subst
 compose s1 s2 =
-  s1 ++ map (\(v, t) -> (v, tySubst s1 t)) s2
+  map (\(v, t) -> (v, tySubst s1 t)) s2 ++ s1
 
 checkFv :: String -> Ty -> Bool
 checkFv v t =
